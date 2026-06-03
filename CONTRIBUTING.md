@@ -6,7 +6,7 @@ forensics are all very welcome.
 ## Setup
 
 ```bash
-git clone https://github.com/OWNER/econoclast && cd econoclast
+git clone https://github.com/shoal-rat/econoclast && cd econoclast
 pip install -e ".[dev,pdf]"
 pytest                 # all tests run offline (mock model)
 ruff check src tests

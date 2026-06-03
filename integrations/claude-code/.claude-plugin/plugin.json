@@ -1,0 +1,7 @@
+{
+  "name": "econoclast",
+  "description": "Adversarial referee for empirical-economics papers: deterministic statistical forensics + grounded critique.",
+  "version": "0.1.0",
+  "author": { "name": "shoal-rat" },
+  "homepage": "https://github.com/shoal-rat/econoclast"
+}

@@ -17,6 +17,8 @@ from econoclast.llm.base import LLMError, LLMProvider, LLMResponse, Message, Usa
 from econoclast.llm.cost import estimate_cost
 from econoclast.llm.providers import (
     AnthropicProvider,
+    ClaudeCodeProvider,
+    CodexProvider,
     GoogleProvider,
     MockProvider,
     OpenAICompatibleProvider,
@@ -108,7 +110,9 @@ class ModelRouter:
             return provider
 
     def _account(self, resp: LLMResponse) -> None:
-        resp.cost_usd = estimate_cost(resp.model, resp.usage, self._pricing_overrides)
+        # CLI backends (Claude Code) report the real dollar cost; keep it.
+        if not resp.cost_usd:
+            resp.cost_usd = estimate_cost(resp.model, resp.usage, self._pricing_overrides)
         with self._lock:
             self.total_usage = self.total_usage + resp.usage
             self.total_cost_usd += resp.cost_usd
@@ -135,6 +139,10 @@ def _build_provider(ref: ModelRef) -> LLMProvider:
         from econoclast.llm.providers.litellm_provider import LiteLLMProvider
 
         return LiteLLMProvider(api_key=ref.resolved_api_key(), base_url=ref.resolved_base_url())
+    if ref.provider in ("claude_cli", "claude_code"):
+        return ClaudeCodeProvider(binary=ref.binary or "claude", extra_args=ref.extra_args)
+    if ref.provider in ("codex_cli", "codex"):
+        return CodexProvider(binary=ref.binary or "codex", extra_args=ref.extra_args)
     # Everything else is treated as OpenAI-compatible.
     return OpenAICompatibleProvider(
         name=ref.provider,

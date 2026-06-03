@@ -44,8 +44,11 @@ def review(
     paper: Path = typer.Argument(..., help="Path to the paper (.pdf, .tex, or .txt)."),
     out: Path | None = typer.Option(None, "--out", "-o", help="Output directory for the report files."),
     fmt: str = typer.Option("all", "--format", "-f", help="md | json | html | all"),
+    backend: str = typer.Option("auto", "--backend", "-b",
+                                help="LLM backend: auto | claude | codex | mock (claude/codex need no API key)."),
     no_llm: bool = typer.Option(False, "--no-llm", help="Deterministic forensics only (no model calls)."),
     no_literature: bool = typer.Option(False, "--no-literature", help="Skip online literature retrieval."),
+    no_blind: bool = typer.Option(False, "--no-blind", help="Don't blind author identity (not recommended)."),
     offline: bool = typer.Option(False, "--offline", help="Force the offline mock model."),
     attacks: str | None = typer.Option(None, "--attacks", help="Comma-separated subset of attack names."),
     config: Path | None = typer.Option(None, "--config", "-c", help="Path to an econoclast.yaml."),
@@ -54,6 +57,7 @@ def review(
     """Run the full adversarial review on a paper."""
     setup_logging("DEBUG" if verbose else "INFO")
     from econoclast.agent.harness import Econoclast
+    from econoclast.config import Settings, cli_routes
     from econoclast.report import render_html, render_markdown
 
     if not paper.exists():
@@ -61,7 +65,13 @@ def review(
         raise typer.Exit(1)
 
     names = [a.strip() for a in attacks.split(",")] if attacks else None
-    eco = Econoclast(config_path=str(config) if config else None, force_mock=offline)
+    settings = Settings.load(str(config) if config else None)
+    if backend == "claude":
+        settings.routes = cli_routes("claude_cli")
+    elif backend == "codex":
+        settings.routes = cli_routes("codex_cli")
+    eco = Econoclast(settings=settings, force_mock=offline or backend == "mock")
+    workers = 3 if backend in ("claude", "codex") else 6
 
     with console.status("[bold]Reviewing…[/bold]", spinner="dots") as status:
         report = eco.review(
@@ -69,6 +79,8 @@ def review(
             attack_names=names,
             use_llm=not no_llm,
             use_literature=not no_literature,
+            blind=not no_blind,
+            max_workers=workers,
             progress=lambda m: status.update(f"[bold]Reviewing…[/bold] {m}"),
         )
 
@@ -183,6 +195,14 @@ def ui() -> None:
     app_path = _P(__file__).parent / "ui" / "app.py"
     console.print("[bold]Launching Econoclast UI…[/bold] (Ctrl-C to stop)")
     subprocess.run([sys.executable, "-m", "streamlit", "run", str(app_path)])
+
+
+@app.command()
+def mcp() -> None:
+    """Run the Econoclast MCP server (stdio) so Claude Code / Codex can call it as a tool."""
+    from econoclast.mcp_server import main as mcp_main
+
+    mcp_main()
 
 
 @app.command()

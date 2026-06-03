@@ -40,7 +40,7 @@ class OpenAICompatibleProvider(LLMProvider):
         if self.api_key:
             headers["Authorization"] = f"Bearer {self.api_key}"
         if self.name == "openrouter":
-            headers.setdefault("HTTP-Referer", "https://github.com/OWNER/econoclast")
+            headers.setdefault("HTTP-Referer", "https://github.com/shoal-rat/econoclast")
             headers.setdefault("X-Title", "Econoclast")
         headers.update(self.extra_headers)
 

@@ -45,14 +45,15 @@ pdf = ["pymupdf>=1.24"]
 ui = ["streamlit>=1.36"]
 embeddings = ["sentence-transformers>=2.7"]
 litellm = ["litellm>=1.40"]
+mcp = ["mcp>=1.2"]
 dev = ["pytest>=8.0", "pytest-cov>=5.0", "ruff>=0.5", "mypy>=1.10"]
-all = ["pymupdf>=1.24", "streamlit>=1.36", "sentence-transformers>=2.7", "litellm>=1.40"]
+all = ["pymupdf>=1.24", "streamlit>=1.36", "sentence-transformers>=2.7", "litellm>=1.40", "mcp>=1.2"]
 
 [project.urls]
-Homepage = "https://github.com/OWNER/econoclast"
-Repository = "https://github.com/OWNER/econoclast"
-Issues = "https://github.com/OWNER/econoclast/issues"
-Documentation = "https://github.com/OWNER/econoclast/tree/main/docs"
+Homepage = "https://github.com/shoal-rat/econoclast"
+Repository = "https://github.com/shoal-rat/econoclast"
+Issues = "https://github.com/shoal-rat/econoclast/issues"
+Documentation = "https://github.com/shoal-rat/econoclast/tree/main/docs"
 
 [project.scripts]
 econoclast = "econoclast.cli:app"

@@ -1,0 +1,7 @@
+# Add this to ~/.codex/config.toml to expose Econoclast's forensics as MCP tools
+# inside Codex. Requires:  pip install "econoclast[mcp]"
+
+[mcp_servers.econoclast]
+command = "econoclast"
+args = ["mcp"]
+# startup_timeout_sec = 30

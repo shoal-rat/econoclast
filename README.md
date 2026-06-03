@@ -7,7 +7,7 @@
 *Hunts p-hacking, cherry-picking, specification search, and reporting errors — with a battery of
 deterministic statistical forensics and multi-model LLM critiques.*
 
-[![CI](https://github.com/OWNER/econoclast/actions/workflows/ci.yml/badge.svg)](https://github.com/OWNER/econoclast/actions/workflows/ci.yml)
+[![CI](https://github.com/shoal-rat/econoclast/actions/workflows/ci.yml/badge.svg)](https://github.com/shoal-rat/econoclast/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
 [![Code style: ruff](https://img.shields.io/badge/lint-ruff-261230.svg)](https://github.com/astral-sh/ruff)
@@ -30,8 +30,10 @@ It runs at two levels:
    for specification search, cherry-picking, identification flaws, missing robustness, HARKing, and
    over-claiming — then a referee model synthesises a verdict and a **fragility score**.
 
-You can run level 1 alone (offline, instant) or add level 2 with any provider — OpenAI, Anthropic,
-Google, OpenRouter, or a **local model via Ollama**.
+You can run level 1 alone (offline, instant) or add level 2 with **any** backend — OpenAI, Anthropic,
+Google, OpenRouter, a **local model via Ollama**, or — with **no separate API key at all** — your
+existing **Claude Code** or **Codex** subscription. It also runs *inside* those agents as an MCP tool
+or slash command.
 
 ---
 
@@ -72,6 +74,39 @@ econoclast review path/to/paper.pdf -o report/
 pip install "econoclast[ui]"
 econoclast ui
 ```
+
+---
+
+## 🔌 One-click / no-API-key setup (Claude Code & Codex)
+
+Already have **Claude Code** or **Codex** installed and logged in? Then you don't need any API key —
+Econoclast can use your subscription, or run *inside* the agent. Three ways:
+
+**A. As a backend (terminal):**
+```bash
+econoclast review paper.pdf --backend claude   # uses your Claude Code login
+econoclast review paper.pdf --backend codex    # uses your Codex / ChatGPT login
+```
+With no API key set, plain `econoclast review paper.pdf` auto-detects `claude`/`codex` on your PATH.
+
+**B. As an MCP tool the agent calls** (recommended — the agent reasons, Econoclast supplies the stats):
+```bash
+pip install "econoclast[mcp,pdf]"
+claude mcp add econoclast -- econoclast mcp          # Claude Code
+# Codex: add the snippet in integrations/codex/config-snippet.toml to ~/.codex/config.toml
+```
+then just ask *"use econoclast to red-team paper.pdf."*
+
+**C. As a Claude Code plugin / slash command:**
+```text
+/plugin marketplace add shoal-rat/econoclast
+/plugin install econoclast@econoclast
+/econoclast paper.pdf
+```
+(Codex: copy `integrations/codex/prompts/econoclast.md` into `~/.codex/prompts/`, then `/econoclast paper.pdf`.)
+
+Full details in [integrations/README.md](integrations/README.md). *Heads-up:* driving a CLI carries that
+agent's own system-prompt overhead per call, so a direct API key is cheaper for big batches.
 
 ---
 
@@ -195,6 +230,24 @@ gpt-researcher, PaperQA2, the AI-Scientist, and smolagents.
 
 ---
 
+## 🛡️ How we keep the review honest
+
+Automated reviewers fail in well-documented ways — hallucinated critiques, prestige bias, prompt
+injection, sycophancy, over-flagging. Econoclast bakes in the countermeasures the recent literature
+recommends (see [docs/credibility.md](docs/credibility.md)):
+
+- **Ground or drop.** Every LLM finding must carry a verbatim quote; a *mechanical* gate checks the
+  quote actually appears in the paper and down-weights it if not. (Hallucinated critiques are the #1
+  failure mode.)
+- **Identity-blind.** Author names, affiliations, e-mails and acknowledgements are redacted before the
+  LLM attacks — a 1,220-paper economics study found LLMs inflate ratings for elite/visible authors.
+- **Untrusted input.** The manuscript is treated as data, not instructions; invisible/zero-width text
+  is stripped and embedded "give a positive review" injections are detected and flagged.
+- **Calibrated, capped.** Findings carry a severity × confidence weight; the fragility score saturates
+  so a few decisive issues dominate a pile of nitpicks.
+- **Decision-support, not judge.** Econoclast never accepts/rejects — it hands a human verifiable
+  flags. A statistical *inconsistency* can be an honest typo.
+
 ## ⚖️ Limitations & ethics
 
 **Econoclast is a screening tool, not a verdict machine.** Read [docs/interpreting-reports.md](docs/interpreting-reports.md)
@@ -225,7 +278,7 @@ New attacks are easy to add — subclass `Attack`, return `Finding`s, register i
 [CONTRIBUTING.md](CONTRIBUTING.md). Issues and PRs welcome.
 
 ```bash
-git clone https://github.com/OWNER/econoclast && cd econoclast
+git clone https://github.com/shoal-rat/econoclast && cd econoclast
 pip install -e ".[dev,pdf]"
 pytest && ruff check src tests
 ```
@@ -236,7 +289,7 @@ pytest && ruff check src tests
 @software{econoclast,
   title  = {Econoclast: an adversarial AI referee for empirical economics},
   year   = {2026},
-  url    = {https://github.com/OWNER/econoclast}
+  url    = {https://github.com/shoal-rat/econoclast}
 }
 ```
 

@@ -25,4 +25,4 @@ First public release.
   and an optional Streamlit web UI.
 - Docs, a synthetic demo paper with planted issues, and a test suite that runs fully offline.
 
-[0.1.0]: https://github.com/OWNER/econoclast/releases/tag/v0.1.0
+[0.1.0]: https://github.com/shoal-rat/econoclast/releases/tag/v0.1.0

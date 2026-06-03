@@ -18,6 +18,7 @@ from econoclast.attacks.designs import design_label, detect_designs
 from econoclast.attacks.registry import select_attacks
 from econoclast.config import Settings
 from econoclast.ingest.paper import load_paper
+from econoclast.ingest.sanitize import normalize_for_match, quote_supported
 from econoclast.literature import LiteratureSearcher
 from econoclast.llm.router import ModelRouter
 from econoclast.logging import get_logger
@@ -52,6 +53,7 @@ class Econoclast:
         attack_names: list[str] | None = None,
         use_llm: bool = True,
         use_literature: bool = True,
+        blind: bool = True,
         max_workers: int = 6,
         progress=None,
     ) -> Report:
@@ -65,7 +67,9 @@ class Econoclast:
             router=self.router,
             designs=designs,
             searcher=self.searcher if use_literature else None,
+            blind=blind,
         )
+        paper_norm = normalize_for_match(paper.text)
 
         if use_literature and self.searcher is not None:
             ctx.literature = self._gather_literature(paper, designs)
@@ -103,7 +107,22 @@ class Econoclast:
                     a = futs[fut]
                     if progress:
                         progress(f"attack: {a.name}")
-                    findings.extend(fut.result())
+                    findings.extend(_ground(fut.result(), paper_norm))
+
+        # Surface possible prompt injection embedded in the manuscript.
+        injections = paper.meta.get("injection_warnings") or []
+        if injections:
+            findings.append(Finding(
+                attack="injection-scan",
+                title="Possible prompt-injection text embedded in the manuscript",
+                category="data_integrity",
+                severity="high",
+                confidence=0.8,
+                detail="Text resembling instructions to a reviewer/LLM was found in the manuscript. "
+                       "It was treated as untrusted data, but its presence is itself a red flag.",
+                evidence=injections,
+                recommendation="Inspect the manuscript source for hidden/white/zero-width text aimed at influencing an automated reviewer.",
+            ))
 
         forensic_dicts = [r.to_dict() for r in _ordered(ctx.forensic_results)]
         fragility = compute_fragility(findings, forensic_dicts)
@@ -123,11 +142,13 @@ class Econoclast:
                 "version": __version__,
                 "timestamp": datetime.now(timezone.utc).isoformat(timespec="seconds"),
                 "llm_live": include_llm,
+                "blind_review": blind,
                 "models": self._models_used() if include_llm else [],
                 "usage": self.router.summary(),
                 "attacks_run": run_names,
                 "attacks_skipped": skipped,
                 "n_literature": len(ctx.literature),
+                "injection_warnings": len(injections),
             },
         )
         log.info("Review complete: fragility %s/100 (%s), %d findings",
@@ -162,6 +183,18 @@ class Econoclast:
                 if tag not in names:
                     names.append(tag)
         return names
+
+
+def _ground(findings: list[Finding], paper_norm: str) -> list[Finding]:
+    """Mechanical grounding gate: down-weight LLM findings whose quote isn't in the paper."""
+    for f in findings:
+        if not f.evidence:
+            f.confidence = min(f.confidence, 0.4)
+            continue
+        if not any(quote_supported(paper_norm, q) for q in f.evidence):
+            f.confidence = min(f.confidence, 0.3)
+            f.data["quote_unverified"] = True
+    return findings
 
 
 _FORENSIC_ORDER = ["statcheck", "grim", "grimmer", "p-curve", "caliper", "tiva", "benford", "rounding"]

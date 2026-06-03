@@ -1,0 +1,15 @@
+{
+  "name": "econoclast",
+  "owner": { "name": "shoal-rat" },
+  "metadata": {
+    "description": "Adversarial AI referee for empirical-economics papers."
+  },
+  "plugins": [
+    {
+      "name": "econoclast",
+      "source": "./integrations/claude-code",
+      "description": "Red-team an empirical-economics paper for p-hacking, cherry-picking and specification search. Runs Econoclast's deterministic forensics, then critiques the paper.",
+      "version": "0.1.0"
+    }
+  ]
+}

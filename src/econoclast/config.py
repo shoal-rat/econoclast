@@ -10,6 +10,7 @@ matters once you enable the LLM-powered attacks.
 from __future__ import annotations
 
 import os
+import shutil
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -20,6 +21,14 @@ from dotenv import load_dotenv
 from econoclast.logging import get_logger
 
 log = get_logger("config")
+
+# Providers that shell out to a local AI CLI (no API key; subscription auth).
+CLI_BINARIES = {
+    "claude_cli": "claude",
+    "claude_code": "claude",
+    "codex_cli": "codex",
+    "codex": "codex",
+}
 
 # Roles let us send cheap work to a cheap model and hard reasoning to a strong
 # one. An attack asks the router for a role; the router resolves it to a model.
@@ -53,6 +62,8 @@ class ModelRef:
     api_key_env: str | None = None
     temperature: float = 0.2
     max_tokens: int = 4096
+    binary: str | None = None  # for CLI providers (claude_cli / codex_cli)
+    extra_args: list[str] = field(default_factory=list)
 
     @classmethod
     def parse(cls, spec: str | dict[str, Any]) -> ModelRef:
@@ -65,11 +76,13 @@ class ModelRef:
         d = dict(spec)
         return cls(
             provider=d["provider"],
-            model=d["model"],
+            model=d.get("model", ""),
             base_url=d.get("base_url"),
             api_key_env=d.get("api_key_env"),
             temperature=float(d.get("temperature", 0.2)),
             max_tokens=int(d.get("max_tokens", 4096)),
+            binary=d.get("binary"),
+            extra_args=list(d.get("args", []) or d.get("extra_args", [])),
         )
 
     def resolved_base_url(self) -> str | None:
@@ -84,9 +97,11 @@ class ModelRef:
         return os.getenv(env)
 
     def is_usable(self) -> bool:
-        """A model is usable if it needs no key, or its key is present."""
+        """A model is usable if it needs no key, or its key/CLI is present."""
         if self.provider in ("mock", "ollama"):
             return True
+        if self.provider in CLI_BINARIES:
+            return shutil.which(self.binary or CLI_BINARIES[self.provider]) is not None
         return bool(self.resolved_api_key())
 
 
@@ -207,6 +222,13 @@ def default_routes() -> dict[str, list[ModelRef]]:
         strong = ModelRef("google", "gemini-1.5-pro", max_tokens=8192)
         mid = strong
         fast = ModelRef("google", "gemini-1.5-flash", max_tokens=4096)
+    elif shutil.which("claude"):
+        # No API key, but Claude Code is installed → use it (subscription auth).
+        log.info("No API key found; routing through the Claude Code CLI.")
+        return cli_routes("claude_cli")
+    elif shutil.which("codex"):
+        log.info("No API key found; routing through the Codex CLI.")
+        return cli_routes("codex_cli")
     else:
         mock = ModelRef("mock", "mock")
         return {"extractor": [mock], "attacker": [mock], "referee": [mock]}
@@ -216,6 +238,19 @@ def default_routes() -> dict[str, list[ModelRef]]:
         "attacker": [strong, mid],
         "referee": [strong, mid],
     }
+
+
+def cli_routes(provider: str) -> dict[str, list[ModelRef]]:
+    """Routing that sends every role through a local AI CLI (no API key)."""
+    if provider in ("claude_cli", "claude_code"):
+        return {
+            "extractor": [ModelRef("claude_cli", "sonnet")],
+            "attacker": [ModelRef("claude_cli", "opus"), ModelRef("claude_cli", "sonnet")],
+            "referee": [ModelRef("claude_cli", "opus"), ModelRef("claude_cli", "sonnet")],
+        }
+    # Codex: leave the model empty so the user's configured default is used.
+    ref = ModelRef("codex_cli", "")
+    return {"extractor": [ref], "attacker": [ref], "referee": [ref]}
 
 
 def _find_config(path: str | os.PathLike[str] | None) -> Path | None:

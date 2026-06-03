@@ -9,6 +9,7 @@ from econoclast.ingest.claims import extract_claims_from_paper
 from econoclast.ingest.latex import extract_latex
 from econoclast.ingest.models import Paper, Section
 from econoclast.ingest.pdf import extract_pdf
+from econoclast.ingest.sanitize import detect_injection, strip_invisibles
 from econoclast.logging import get_logger
 
 log = get_logger("ingest.paper")
@@ -65,6 +66,15 @@ def load_paper(path: str | Path) -> Paper:
             source_format="text",
             sections=_segment(text),
         )
+
+    # Manuscript hygiene: strip invisible/zero-width characters (injection vector)
+    # and re-segment on the clean text before extracting claims.
+    paper.text = strip_invisibles(paper.text)
+    paper.sections = _segment(paper.text)
+    injections = detect_injection(paper.text)
+    if injections:
+        log.warning("Possible prompt-injection text found in manuscript: %d hit(s)", len(injections))
+    paper.meta["injection_warnings"] = injections
 
     if not paper.abstract:
         paper.abstract = _guess_abstract(paper.text)

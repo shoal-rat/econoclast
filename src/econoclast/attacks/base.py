@@ -89,6 +89,7 @@ class AttackContext:
     literature: list[LitRef] = field(default_factory=list)
     forensic_results: list[ForensicResult] = field(default_factory=list)
     run_dir: Path | None = None
+    blind: bool = True  # blind author identity to LLM attacks (anti prestige-bias)
     notes: dict[str, Any] = field(default_factory=dict)
 
     @property
