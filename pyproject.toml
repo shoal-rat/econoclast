@@ -1,0 +1,88 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "econoclast"
+version = "0.1.0"
+description = "A multi-model AI agent that red-teams empirical-economics papers for p-hacking, cherry-picking, and specification search."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Econoclast contributors" }]
+keywords = [
+    "economics", "econometrics", "p-hacking", "research-integrity",
+    "peer-review", "llm", "agent", "specification-curve", "replication",
+    "statcheck", "meta-science",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Text Processing",
+]
+dependencies = [
+    "httpx>=0.27",
+    "typer>=0.12",
+    "rich>=13.7",
+    "pyyaml>=6.0",
+    "numpy>=1.24",
+    "scipy>=1.10",
+    "pypdf>=4.2",
+    "tenacity>=8.2",
+    "python-dotenv>=1.0",
+    "jinja2>=3.1",
+]
+
+[project.optional-dependencies]
+# PyMuPDF gives noticeably better text/table extraction but is AGPL-3.0; it is
+# opt-in so the default install stays permissive (pypdf is BSD).
+pdf = ["pymupdf>=1.24"]
+ui = ["streamlit>=1.36"]
+embeddings = ["sentence-transformers>=2.7"]
+litellm = ["litellm>=1.40"]
+dev = ["pytest>=8.0", "pytest-cov>=5.0", "ruff>=0.5", "mypy>=1.10"]
+all = ["pymupdf>=1.24", "streamlit>=1.36", "sentence-transformers>=2.7", "litellm>=1.40"]
+
+[project.urls]
+Homepage = "https://github.com/OWNER/econoclast"
+Repository = "https://github.com/OWNER/econoclast"
+Issues = "https://github.com/OWNER/econoclast/issues"
+Documentation = "https://github.com/OWNER/econoclast/tree/main/docs"
+
+[project.scripts]
+econoclast = "econoclast.cli:app"
+clast = "econoclast.cli:app"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+econoclast = ["report/templates/*.html", "report/templates/*.md", "data/*.yaml"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W", "UP", "B"]
+ignore = ["E501", "B008"]
+
+[tool.ruff.lint.per-file-ignores]
+# cli.py reconfigures stdout/stderr to UTF-8 before importing rich/typer, which
+# must therefore come after that block.
+"src/econoclast/cli.py" = ["E402"]
+
+[tool.mypy]
+python_version = "3.10"
+ignore_missing_imports = true
+warn_unused_ignores = false

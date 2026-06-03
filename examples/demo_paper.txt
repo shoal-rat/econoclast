@@ -1,0 +1,60 @@
+Minimum Wages and Teen Employment: New Evidence from a Synthetic Panel
+
+NOTE: This is a SYNTHETIC paper written to demonstrate Econoclast. The numbers
+below contain DELIBERATELY PLANTED problems (a p-value that contradicts its test
+statistic, impossible descriptive statistics, a flat p-curve, and a pile of
+t-statistics bunched just above 1.96). It is not a real study. Point Econoclast
+at it with `econoclast forensics examples/demo_paper.txt` to see them caught.
+
+Abstract
+
+We show that a 10% increase in the minimum wage causes a large and robust
+decline in teen employment. The effect is highly significant across every
+specification we ran, and our preferred estimate proves that raising the minimum
+wage destroys jobs everywhere and for everyone.
+
+1. Introduction
+
+Few questions in labor economics are as contested as the employment effect of
+the minimum wage. We revisit it with a new county-level panel and a
+difference-in-differences design exploiting staggered state-level increases.
+
+2. Data and Descriptive Statistics
+
+Our sample covers 312 counties over 24 quarters. In the treated counties the
+mean teen employment rate was M = 2.71 (SD = 1.10) across N = 23 reform episodes.
+The reported satisfaction score in our follow-up survey had a mean M = 3.40,
+SD = 0.95, N = 17.
+
+3. Empirical Strategy
+
+We estimate a two-way fixed effects difference-in-differences model with county
+and quarter fixed effects, clustering standard errors by state. We assume
+parallel trends. We focus on the 2009-2013 window because that is where the
+effect is cleanest.
+
+4. Results
+
+The central estimate is striking. In our headline specification the wage effect
+is significant, t(50) = 1.20, p = 0.008, which we interpret as decisive.
+
+Across our many specifications the effect statistics clustered as follows:
+t(300) = 1.97, t(300) = 1.99, t(300) = 2.01, t(300) = 2.03, t(300) = 2.05,
+t(300) = 2.08, t(300) = 1.98, t(300) = 2.00, t(300) = 2.10, t(300) = 2.12,
+and only a handful fell short: t(300) = 1.80, t(300) = 1.88, t(300) = 1.70.
+
+Across the six pre-registered outcomes the treatment was significant
+(p = 0.049, p = 0.048, p = 0.047, p = 0.046, p = 0.045, p = 0.049). The
+consistency of these results is, in our view, overwhelming.
+
+5. Robustness
+
+We re-ran the model dropping one state at a time and the sign never changed. We
+did not report alternative bandwidths, alternative clustering, the full
+event-study, or placebo reform dates, because the headline result is obviously
+correct.
+
+6. Conclusion
+
+Minimum wage increases destroy teen employment. Policymakers everywhere should
+take note: our county panel settles the debate.
