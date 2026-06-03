@@ -21,15 +21,15 @@ a deterministic test proves a number impossible or a p-value flips significance.
 
 ## What each signal does and does NOT mean
 
-- **statcheck / GRIM / GRIMMER inconsistency** → a number is internally impossible or mismatched. This
+- **statcheck / GRIM / GRIMMER inconsistency** -> a number is internally impossible or mismatched. This
   is high-confidence *as arithmetic*, but the cause could be a typo, a rounding convention, or a
   transcription error — **not necessarily fabrication.** It always warrants a correction.
-- **p-curve flat, caliper bunching, TIVA low variance** → distributional signals of selective
+- **p-curve flat, caliper bunching, TIVA low variance** -> distributional signals of selective
   reporting. They are **weak on small samples** and assume conditions (independent tests of one
   hypothesis, local density smoothness) a single paper may violate. Capped at modest confidence and
   printed with caveats. Treat as "look harder here," not proof.
-- **Benford / terminal-digit** → exploratory only. Regression coefficients need not be Benford.
-- **LLM findings** (specification search, cherry-picking, identification, …) → reasoning that *can be
+- **Benford / terminal-digit** -> exploratory only. Regression coefficients need not be Benford.
+- **LLM findings** (specification search, cherry-picking, identification, …) -> reasoning that *can be
   wrong or over-confident.* Every one carries a verbatim quote so you can check it against the paper
   in seconds. If the quote doesn't support the claim, discard it.
 

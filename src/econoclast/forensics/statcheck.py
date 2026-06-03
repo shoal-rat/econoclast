@@ -101,7 +101,7 @@ def run_statcheck(claims: list) -> ForensicResult:
                 detail=(
                     f"{c.test_type}={c.stat_value} (df={_fmt_df(c)}) implies p≈{computed:.4f}, "
                     f"but the paper reports p{c.p_comparator}{c.p_value}"
-                    + ("  ← flips significance at .05" if decision_error else "")
+                    + ("  <- flips significance at .05" if decision_error else "")
                 ),
                 severity="high" if decision_error else "medium",
                 data={

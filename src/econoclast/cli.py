@@ -5,7 +5,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-# Make Unicode (≥, ✅, emoji) render on legacy Windows code pages.
+# Make non-ASCII output render on legacy Windows code pages.
 for _stream in (sys.stdout, sys.stderr):
     try:
         _stream.reconfigure(encoding="utf-8")  # type: ignore[union-attr]
@@ -52,7 +52,7 @@ def review(
     offline: bool = typer.Option(False, "--offline", help="Force the offline mock model."),
     attacks: str | None = typer.Option(None, "--attacks", help="Comma-separated subset of attack names."),
     replicate: Path | None = typer.Option(None, "--replicate",
-                                          help="Replication spec config (YAML) → run a specification curve."),
+                                          help="Replication spec config (YAML) -> run a specification curve."),
     config: Path | None = typer.Option(None, "--config", "-c", help="Path to an econoclast.yaml."),
     verbose: bool = typer.Option(False, "--verbose", "-v"),
 ) -> None:
@@ -61,7 +61,6 @@ def review(
     from econoclast.agent.harness import Econoclast
     from econoclast.config import Settings, cli_routes
     from econoclast.ingest.fetch import is_url
-    from econoclast.report import render_html, render_markdown
 
     if not is_url(paper) and not Path(paper).exists():
         console.print(f"[red]Not found:[/red] {paper}")
@@ -90,22 +89,57 @@ def review(
         )
 
     _print_summary(report)
+    written = _write_report(report, out or Path(f"econoclast-{paper_stem}"), fmt)
+    console.print("\n[dim]Wrote:[/dim] " + ", ".join(str(p) for p in written))
 
-    out_dir = out or Path(f"econoclast-{paper_stem}")
-    out_dir.mkdir(parents=True, exist_ok=True)
-    written = []
-    if fmt in ("json", "all"):
-        p = out_dir / "report.json"
-        p.write_text(report.to_json(), encoding="utf-8")
-        written.append(p)
-    if fmt in ("md", "all"):
-        p = out_dir / "report.md"
-        p.write_text(render_markdown(report), encoding="utf-8")
-        written.append(p)
-    if fmt in ("html", "all"):
-        p = out_dir / "report.html"
-        p.write_text(render_html(report), encoding="utf-8")
-        written.append(p)
+
+@app.command()
+def verify(
+    paper: str = typer.Argument(..., help="Paper path or URL. Econoclast fetches it, finds & downloads "
+                                          "the dataset, and runs the whole review automatically."),
+    data: Path | None = typer.Option(None, "--data", help="Local dataset (skip auto-download)."),
+    out: Path | None = typer.Option(None, "--out", "-o"),
+    fmt: str = typer.Option("all", "--format", "-f", help="md | json | html | all"),
+    backend: str = typer.Option("auto", "--backend", "-b", help="auto | claude | codex | mock"),
+    no_literature: bool = typer.Option(False, "--no-literature"),
+    no_blind: bool = typer.Option(False, "--no-blind"),
+    config: Path | None = typer.Option(None, "--config", "-c"),
+    verbose: bool = typer.Option(False, "--verbose", "-v"),
+) -> None:
+    """Autonomous end-to-end check: paper -> forensics + critique -> dataset -> specification curve."""
+    setup_logging("DEBUG" if verbose else "INFO")
+    from econoclast.agent.harness import Econoclast
+    from econoclast.config import Settings, cli_routes
+    from econoclast.ingest.fetch import is_url
+
+    if not is_url(paper) and not Path(paper).exists():
+        console.print(f"[red]Not found:[/red] {paper}")
+        raise typer.Exit(1)
+
+    settings = Settings.load(str(config) if config else None)
+    if backend == "claude":
+        settings.routes = cli_routes("claude_cli")
+    elif backend == "codex":
+        settings.routes = cli_routes("codex_cli")
+    eco = Econoclast(settings=settings, force_mock=backend == "mock")
+    workers = 3 if backend in ("claude", "codex") else 6
+
+    with console.status("[bold]Verifying...[/bold]", spinner="dots") as status:
+        report = eco.verify(
+            paper, data=str(data) if data else None,
+            use_literature=not no_literature, blind=not no_blind, max_workers=workers,
+            progress=lambda m: status.update(f"[bold]Verifying...[/bold] {m}"),
+        )
+
+    ds = report.meta.get("dataset", {})
+    if ds.get("autoconfig"):
+        console.print(f"[green]Dataset:[/green] auto-replicated from {ds.get('source')}")
+    elif ds.get("note"):
+        console.print(f"[yellow]Dataset:[/yellow] {ds['note']}")
+    _print_summary(report)
+
+    out_dir = out or Path(f"econoclast-{'paper' if is_url(paper) else Path(paper).stem}")
+    written = _write_report(report, out_dir, fmt)
     console.print("\n[dim]Wrote:[/dim] " + ", ".join(str(p) for p in written))
 
 
@@ -284,8 +318,8 @@ def setup(
     keys = ", ".join(k for k, v in env["api_keys"].items() if v) or "none"
     console.print(Panel(
         f"API keys: [bold]{keys}[/bold]\n"
-        f"Claude Code CLI: [bold]{'✅' if env['claude'] else '—'}[/bold]   "
-        f"Codex CLI: [bold]{'✅' if env['codex'] else '—'}[/bold]\n"
+        f"Claude Code CLI: [bold]{'yes' if env['claude'] else '—'}[/bold]   "
+        f"Codex CLI: [bold]{'yes' if env['codex'] else '—'}[/bold]\n"
         f"Recommended backend: [bold]{env['recommended_backend']}[/bold]",
         title="Detected environment"))
 
@@ -307,10 +341,10 @@ def setup(
 
     console.print(f"\n[green]Backend:[/green] {res['backend']}")
     for a in res["actions"]:
-        console.print(f"  ✓ {a}")
+        console.print(f"  - {a}")
     console.print("\n[bold]Next:[/bold]")
     for s in res["next_steps"]:
-        console.print(f"  • {s}")
+        console.print(f"  - {s}")
 
 
 @app.command()
@@ -332,6 +366,27 @@ def _s(x) -> str:
     return "" if x is None else str(x)
 
 
+def _write_report(report, out_dir, fmt: str):
+    from econoclast.report import render_html, render_markdown
+
+    out_dir = Path(out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    written = []
+    if fmt in ("json", "all"):
+        p = out_dir / "report.json"
+        p.write_text(report.to_json(), encoding="utf-8")
+        written.append(p)
+    if fmt in ("md", "all"):
+        p = out_dir / "report.md"
+        p.write_text(render_markdown(report), encoding="utf-8")
+        written.append(p)
+    if fmt in ("html", "all"):
+        p = out_dir / "report.html"
+        p.write_text(render_html(report), encoding="utf-8")
+        written.append(p)
+    return written
+
+
 def _print_summary(report) -> None:
     frag = report.fragility
     band = frag.get("band", "Unknown")
@@ -341,7 +396,7 @@ def _print_summary(report) -> None:
     head.append(band, style=style)
     body = Text(f"\n{frag.get('band_blurb','')}\n", style="dim")
     if frag.get("integrity_violation"):
-        body.append("\n⚠ Integrity flag: a reported statistic is internally impossible/inconsistent.\n", style="bold yellow")
+        body.append("\n Integrity flag: a reported statistic is internally impossible/inconsistent.\n", style="bold yellow")
     console.print(Panel(Text.assemble(head, body), title=report.paper_title[:70],
                         subtitle=f"{', '.join(report.designs) or 'design unclear'}", border_style=style))
 

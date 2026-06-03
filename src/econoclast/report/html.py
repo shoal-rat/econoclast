@@ -65,7 +65,7 @@ h2 { margin-top:34px; border-bottom:1px solid var(--line); padding-bottom:6px; }
     <div class="bar"><div style="width:{{ frag.score }}%; background:{{ band_color }}"></div></div>
   </div>
 </div>
-{% if frag.integrity_violation %}<div class="integrity">⚠️ <b>Integrity flag:</b> at least one reported statistic is internally impossible or inconsistent.</div>{% endif %}
+{% if frag.integrity_violation %}<div class="integrity"><b>Integrity flag:</b> at least one reported statistic is internally impossible or inconsistent.</div>{% endif %}
 
 {% if referee.headline %}<h2>Referee summary</h2>
 <div class="card"><b>{{ referee.headline }}</b><p>{{ referee.assessment }}</p>

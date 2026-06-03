@@ -6,8 +6,6 @@ from jinja2 import Template
 
 from econoclast.report.models import Report
 
-_SEV_EMOJI = {"critical": "🟥", "high": "🟧", "medium": "🟨", "low": "🟦", "info": "⬜"}
-
 _MD = Template(
     """# Econoclast adversarial review
 
@@ -18,12 +16,12 @@ _MD = Template(
 ## Fragility: {{ frag.score }}/100 — {{ frag.band }}
 > {{ frag.band_blurb }}
 {% if frag.integrity_violation %}
-> ⚠️ **Integrity flag:** at least one reported statistic is internally impossible or inconsistent.
+> **Integrity flag:** at least one reported statistic is internally impossible or inconsistent.
 {% endif %}
 
 | Severity | Count |
 |---|---|
-{% for sev in ["critical","high","medium","low"] %}{% if frag.by_severity.get(sev) %}| {{ _emoji(sev) }} {{ sev }} | {{ frag.by_severity[sev] }} |
+{% for sev in ["critical","high","medium","low"] %}{% if frag.by_severity.get(sev) %}| {{ sev }} | {{ frag.by_severity[sev] }} |
 {% endif %}{% endfor %}
 
 {% if referee.headline %}## Referee summary
@@ -39,7 +37,7 @@ _MD = Template(
 
 {% if not findings %}_No findings raised._{% endif %}
 {% for f in findings %}
-### {{ loop.index }}. {{ _emoji(f.severity) }} {{ f.title }}
+### {{ loop.index }}. {{ f.title }}
 `{{ f.severity }}` · `{{ f.category }}` · confidence {{ "%.0f"|format(f.confidence * 100) }}% · _{{ f.attack }}_{% if f.locations %} · {{ f.locations | join(", ") }}{% endif %}
 
 {{ f.detail }}
@@ -69,10 +67,10 @@ Attacks run: {{ meta.attacks_run | join(", ") }}{% if meta.attacks_skipped %}; s
 
 def _verdict_md(v: str) -> str:
     return {
-        "suspicious": "⚠️ suspicious",
-        "clean": "✅ clean",
-        "inconclusive": "➖ inconclusive",
-        "insufficient_data": "· n/a",
+        "suspicious": "suspicious",
+        "clean": "clean",
+        "inconclusive": "inconclusive",
+        "insufficient_data": "n/a",
     }.get(v, v)
 
 
@@ -84,6 +82,5 @@ def render_markdown(report: Report) -> str:
         findings=report.findings_sorted(),
         forensics=report.forensic_results,
         meta=report.meta,
-        _emoji=lambda s: _SEV_EMOJI.get(s, "•"),
         _verdict=_verdict_md,
     )

@@ -223,7 +223,7 @@ def default_routes() -> dict[str, list[ModelRef]]:
         mid = strong
         fast = ModelRef("google", "gemini-1.5-flash", max_tokens=4096)
     elif shutil.which("claude"):
-        # No API key, but Claude Code is installed → use it (subscription auth).
+        # No API key, but Claude Code is installed -> use it (subscription auth).
         log.info("No API key found; routing through the Claude Code CLI.")
         return cli_routes("claude_cli")
     elif shutil.which("codex"):

@@ -23,12 +23,11 @@ _BAND_COLOR = {
     "Robust": "#1a7f37", "Minor concerns": "#9a6700", "Material concerns": "#bc4c00",
     "Fragile": "#cf222e", "Severe": "#82071e",
 }
-_SEV_EMOJI = {"critical": "🟥", "high": "🟧", "medium": "🟨", "low": "🟦", "info": "⬜"}
 
 
 def main() -> None:
-    st.set_page_config(page_title="Econoclast", page_icon="🪓", layout="wide")
-    st.title("🪓 Econoclast")
+    st.set_page_config(page_title="Econoclast", layout="wide")
+    st.title("Econoclast")
     st.caption("An adversarial AI referee that red-teams empirical-economics papers "
                "for p-hacking, cherry-picking and specification search.")
 
@@ -37,7 +36,7 @@ def main() -> None:
 
     with st.sidebar:
         st.header("Settings")
-        st.write(f"**Live LLM:** {'✅ available' if live else '❌ mock only'}")
+        st.write(f"**Live LLM:** {'available' if live else 'mock only'}")
         offline = st.checkbox("Offline (deterministic only)", value=not live)
         use_lit = st.checkbox("Retrieve online literature", value=live and not offline)
         st.divider()
@@ -79,7 +78,7 @@ def _render(report) -> None:
     c2.markdown(f"<h3 style='color:{color}'>{frag['band']}</h3>", unsafe_allow_html=True)
     c3.write(frag["band_blurb"])
     if frag.get("integrity_violation"):
-        st.warning("⚠️ Integrity flag: a reported statistic is internally impossible or inconsistent.")
+        st.warning("Integrity flag: a reported statistic is internally impossible or inconsistent.")
 
     if report.referee.get("headline"):
         st.subheader("Referee verdict")
@@ -90,7 +89,7 @@ def _render(report) -> None:
 
     st.subheader(f"Findings ({len(report.findings)})")
     for f in report.findings_sorted():
-        with st.expander(f"{_SEV_EMOJI.get(f.severity,'•')} {f.title}  ·  {f.category}  ·  {f.confidence*100:.0f}%"):
+        with st.expander(f"[{f.severity}] {f.title}  ·  {f.category}  ·  {f.confidence*100:.0f}%"):
             st.write(f.detail)
             for q in f.evidence:
                 st.markdown(f"> {q}")
@@ -106,9 +105,9 @@ def _render(report) -> None:
 
     st.divider()
     d1, d2, d3 = st.columns(3)
-    d1.download_button("⬇ JSON", report.to_json(), "econoclast-report.json", "application/json")
-    d2.download_button("⬇ Markdown", render_markdown(report), "econoclast-report.md", "text/markdown")
-    d3.download_button("⬇ HTML", render_html(report), "econoclast-report.html", "text/html")
+    d1.download_button("JSON", report.to_json(), "econoclast-report.json", "application/json")
+    d2.download_button("Markdown", render_markdown(report), "econoclast-report.md", "text/markdown")
+    d3.download_button("HTML", render_html(report), "econoclast-report.html", "text/html")
 
 
 if __name__ == "__main__":

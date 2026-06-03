@@ -6,6 +6,15 @@ All notable changes to Econoclast are documented here. Format follows
 ## [Unreleased]
 
 ### Added
+- **Autonomous `econoclast verify <path or URL>`**: one line in, full verdict out. Fetches the paper,
+  runs forensics + critique, finds the dataset named in the paper (Zenodo, Dataverse, OSF, GitHub, or a
+  direct file), downloads and unzips it, asks the model to map the paper's variables onto the dataset
+  columns, and runs the specification curve. `--data` to use a local dataset. Also exposed as the
+  `econoclast_verify` MCP tool so an agent can run it from a single instruction.
+- New README with SVG banner and pipeline diagram; all emojis removed across the README, docs, and the
+  CLI / report / UI output; prose de-AI-ed.
+
+### Added (earlier in this cycle)
 - **Replication mode** (`econoclast replicate`, `pip install econoclast[replication]`): specification-
   curve / multiverse analysis that re-estimates the headline coefficient across every defensible
   combination of controls × fixed effects × clustering × sample and reports the share that survive;

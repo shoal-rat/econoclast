@@ -20,7 +20,7 @@ econoclast/
 
 ## The pipeline
 
-1. **Ingest.** Load PDF/LaTeX/text → `Paper` (title, abstract, sections, tables). A conservative regex
+1. **Ingest.** Load PDF/LaTeX/text -> `Paper` (title, abstract, sections, tables). A conservative regex
    pass harvests every `StatClaim` it can: `(coef, se)`, t/F/r/z/χ² statistics with df, p-values,
    means/SDs, stars, and N.
 2. **Detect design.** Keyword detection tags the paper with `did / rdd / iv / matching / rct / panel_fe
@@ -44,7 +44,7 @@ econoclast/
   local Ollama models (which lack native function calling) behave exactly like frontier APIs.
 - **Grounding.** Every LLM finding must include a verbatim quote; ungrounded findings are capped at
   low confidence. This is the main defence against hallucinated problems.
-- **Graceful degradation.** No keys → forensics-only report via the mock provider. A literature source
-  down → it returns `[]` and the run continues.
+- **Graceful degradation.** No keys -> forensics-only report via the mock provider. A literature source
+  down -> it returns `[]` and the run continues.
 - **Reproducibility.** Deterministic forensics are pure functions of the extracted numbers; the same
   paper yields the same battery every time.

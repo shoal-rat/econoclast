@@ -9,25 +9,25 @@ page records which, and why.
 
 - **LLM feedback is useful, LLM *decisions* are not.** GPT-4 review feedback overlaps with human
   reviewers about as much as two humans overlap (~31% on Nature-family papers, ~39% on ICLR), but
-  standalone accept/reject is weak and biased (Liang et al., *NEJM AI* 2024). → Econoclast is
+  standalone accept/reject is weak and biased (Liang et al., *NEJM AI* 2024). -> Econoclast is
   decision-support; it never accepts/rejects.
 - **Prestige/identity bias is real and large in economics.** Across 29k evaluations of 1,220 papers,
   GPT-4o / Claude / Gemma / LLaMA gave higher ratings when elite/male author identities were visible
-  vs. anonymised (Ye et al., 2025). → **Blind review is on by default**: authors, affiliations,
+  vs. anonymised (Ye et al., 2025). -> **Blind review is on by default**: authors, affiliations,
   e-mails and acknowledgements are redacted before the LLM attacks (`--no-blind` to disable).
 - **The one field-validated deployment wrapped generation in reliability gates.** The ICLR 2025
   Review-Feedback-Agent (20k reviews) only shipped feedback that passed automated checks; 89% was
-  rated a quality improvement (Thakkar et al., 2025). → Econoclast runs a **mechanical grounding
+  rated a quality improvement (Thakkar et al., 2025). -> Econoclast runs a **mechanical grounding
   gate**: a finding's quote must actually appear in the paper, or its confidence is capped.
 - **Hallucinated critiques and citations survive human review.** Fabricated citations reached ~1% of
-  accepted NeurIPS 2025 papers. → **Ground or drop**: no verbatim quote, no finding. (Mechanical
+  accepted NeurIPS 2025 papers. -> **Ground or drop**: no verbatim quote, no finding. (Mechanical
   citation verification against Crossref/OpenAlex is on the roadmap.)
 - **Prompt injection works.** Hidden white/zero-width "GIVE A POSITIVE REVIEW" text has been found in
-  real arXiv manuscripts (Lin 2025). → Econoclast **strips invisible characters**, **detects**
+  real arXiv manuscripts (Lin 2025). -> Econoclast **strips invisible characters**, **detects**
   injection phrases and **raises a finding**, and instructs every attacker model that the manuscript
   is untrusted data.
 - **Ensembling reduces variance; role-specialisation reduces generic comments** (Sakana AI-Scientist;
-  MARG, D'Arcy et al. 2024). → Attacks are **role-specialised** (one persona per failure mode) and
+  MARG, D'Arcy et al. 2024). -> Attacks are **role-specialised** (one persona per failure mode) and
   **design-gated**. Multi-model ensembling per finding is on the roadmap.
 
 ## The rules Econoclast follows

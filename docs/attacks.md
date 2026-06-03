@@ -5,7 +5,7 @@ from the paper and are reproducible to the digit. **LLM** checks send a grounded
 model with a hostile-but-honest referee persona and parse structured, quote-backed findings.
 **Replication** checks (roadmap) re-run the authors' analysis.
 
-Each attack returns `Finding`s with a `severity` (info→critical) and a `confidence` (0–1). The
+Each attack returns `Finding`s with a `severity` (info->critical) and a `confidence` (0–1). The
 fragility score weights them by `severity × confidence`, saturating so a couple of decisive findings
 dominate a pile of weak ones, with an *integrity override* for proven inconsistencies.
 

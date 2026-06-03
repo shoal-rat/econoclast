@@ -94,6 +94,28 @@ def build_server():
         return report.to_dict()
 
     @mcp.tool()
+    def econoclast_verify(paper: str, data: str = "") -> dict:
+        """Autonomous end-to-end verification of an empirical paper.
+
+        Give it a local path or a URL. It fetches the paper, runs the forensics +
+        adversarial critique, then tries to find and download the dataset named in
+        the paper and auto-run a specification curve. If you already have the data
+        locally, pass its path as `data`.
+
+        Args:
+            paper: local path OR URL to the paper.
+            data: optional local dataset path (skips auto-download).
+        Returns:
+            the full report dict, with meta.dataset describing what was found.
+        """
+        from econoclast.agent.harness import Econoclast
+        from econoclast.config import Settings
+
+        eco = Econoclast(settings=Settings.load())
+        report = eco.verify(paper, data=data or None, use_llm=True, use_literature=True)
+        return report.to_dict()
+
+    @mcp.tool()
     def econoclast_replicate(spec_config_path: str) -> dict:
         """Run a specification-curve / multiverse replication from a spec config (YAML).
 

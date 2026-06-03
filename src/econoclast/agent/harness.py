@@ -176,6 +176,88 @@ class Econoclast:
                  fragility["score"], fragility["band"], len(findings))
         return report
 
+    # ------------------------------------------------------------- verify
+    def verify(
+        self,
+        source: str,
+        *,
+        data: str | None = None,
+        use_llm: bool = True,
+        use_literature: bool = True,
+        blind: bool = True,
+        max_workers: int = 6,
+        progress=None,
+    ) -> Report:
+        """One-line verification: fetch the paper, find & download its dataset,
+        auto-configure a specification curve, and run the whole review.
+
+        Hand it a path or a URL. If you already have the data, pass ``data``.
+        """
+        from econoclast.ingest.fetch import resolve_source
+        from econoclast.ingest.paper import load_paper
+
+        paper_file = resolve_source(str(source), cache_dir=self.settings.cache_dir)
+        paper = load_paper(paper_file)
+
+        info = {"requested": True, "provided": bool(data), "found": bool(data),
+                "source": "provided" if data else None, "autoconfig": False, "note": ""}
+        data_path = data
+        if not data_path:
+            if progress:
+                progress("looking for the paper's dataset")
+            data_path, src = self._acquire_dataset(paper, progress)
+            info["found"] = bool(data_path)
+            info["source"] = src
+
+        spec_path = None
+        if data_path:
+            if progress:
+                progress("auto-configuring the replication")
+            from econoclast.agent.autoconfig import generate_spec_config
+
+            cfg = generate_spec_config(paper, data_path, self.router)
+            if cfg is not None:
+                spec_path = str(self.settings.cache_path() / "auto_spec.yaml")
+                Path(spec_path).write_text(cfg.to_yaml(), encoding="utf-8")
+                info["autoconfig"] = True
+            else:
+                info["note"] = "Found data but could not auto-configure the replication (need a live model)."
+        else:
+            info["note"] = "No public dataset link found in the paper; ran forensics + critique only."
+
+        report = self.review(
+            paper_file, use_llm=use_llm, use_literature=use_literature, blind=blind,
+            replication_config=spec_path, max_workers=max_workers, progress=progress,
+        )
+        report.meta["dataset"] = info
+        return report
+
+    def _acquire_dataset(self, paper, progress) -> tuple[str | None, str | None]:
+        from econoclast.replication.acquire import (
+            acquire_dataset,
+            find_tabular_files,
+            pick_main_table,
+        )
+        from econoclast.replication.discover import find_dataset_links
+
+        links = find_dataset_links(paper)
+        if not links:
+            return None, None
+        work = self.settings.cache_path() / "data"
+        for link in links[:4]:
+            if progress:
+                progress(f"fetching dataset: {link.kind} {link.ref[:40]}")
+            try:
+                files = acquire_dataset(link, work)
+            except Exception as exc:  # noqa: BLE001
+                log.warning("acquire failed for %s: %s", link.url, exc)
+                continue
+            main = pick_main_table(find_tabular_files(files), paper)
+            if main is not None:
+                log.info("Using dataset %s (from %s)", main.name, link.url)
+                return str(main), link.url
+        return None, None
+
     # -------------------------------------------------------------- helpers
     def _safe_run(self, attack: Attack, ctx: AttackContext) -> list[Finding]:
         try:
