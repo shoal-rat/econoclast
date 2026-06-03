@@ -40,8 +40,14 @@ or slash command.
 ## ⚡ Quickstart
 
 ```bash
-pip install econoclast            # or: pip install "econoclast[all]"
+# Until the PyPI release, install from the repo:
+pip install "git+https://github.com/shoal-rat/econoclast"
+# with every extra (PDF, UI, MCP, LiteLLM):
+pip install "econoclast[all] @ git+https://github.com/shoal-rat/econoclast"
 ```
+
+> 📦 A `pip install econoclast` PyPI release is coming; until then use the Git URL above (the docs
+> elsewhere write the short `pip install econoclast` form for brevity).
 
 **Offline forensics in 5 seconds — no keys required:**
 
