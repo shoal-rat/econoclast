@@ -41,7 +41,7 @@ _SEV_STYLE = {"critical": "bold white on red", "high": "bold red", "medium": "da
 
 @app.command()
 def review(
-    paper: Path = typer.Argument(..., help="Path to the paper (.pdf, .tex, or .txt)."),
+    paper: str = typer.Argument(..., help="Path OR URL to the paper (.pdf/.tex/.txt, arXiv, or a webpage)."),
     out: Path | None = typer.Option(None, "--out", "-o", help="Output directory for the report files."),
     fmt: str = typer.Option("all", "--format", "-f", help="md | json | html | all"),
     backend: str = typer.Option("auto", "--backend", "-b",
@@ -51,18 +51,22 @@ def review(
     no_blind: bool = typer.Option(False, "--no-blind", help="Don't blind author identity (not recommended)."),
     offline: bool = typer.Option(False, "--offline", help="Force the offline mock model."),
     attacks: str | None = typer.Option(None, "--attacks", help="Comma-separated subset of attack names."),
+    replicate: Path | None = typer.Option(None, "--replicate",
+                                          help="Replication spec config (YAML) → run a specification curve."),
     config: Path | None = typer.Option(None, "--config", "-c", help="Path to an econoclast.yaml."),
     verbose: bool = typer.Option(False, "--verbose", "-v"),
 ) -> None:
-    """Run the full adversarial review on a paper."""
+    """Run the full adversarial review on a paper (local path or URL)."""
     setup_logging("DEBUG" if verbose else "INFO")
     from econoclast.agent.harness import Econoclast
     from econoclast.config import Settings, cli_routes
+    from econoclast.ingest.fetch import is_url
     from econoclast.report import render_html, render_markdown
 
-    if not paper.exists():
-        console.print(f"[red]File not found:[/red] {paper}")
+    if not is_url(paper) and not Path(paper).exists():
+        console.print(f"[red]Not found:[/red] {paper}")
         raise typer.Exit(1)
+    paper_stem = "paper" if is_url(paper) else Path(paper).stem
 
     names = [a.strip() for a in attacks.split(",")] if attacks else None
     settings = Settings.load(str(config) if config else None)
@@ -80,13 +84,14 @@ def review(
             use_llm=not no_llm,
             use_literature=not no_literature,
             blind=not no_blind,
+            replication_config=str(replicate) if replicate else None,
             max_workers=workers,
             progress=lambda m: status.update(f"[bold]Reviewing…[/bold] {m}"),
         )
 
     _print_summary(report)
 
-    out_dir = out or Path(f"econoclast-{Path(paper).stem}")
+    out_dir = out or Path(f"econoclast-{paper_stem}")
     out_dir.mkdir(parents=True, exist_ok=True)
     written = []
     if fmt in ("json", "all"):
@@ -106,16 +111,17 @@ def review(
 
 @app.command()
 def forensics(
-    paper: Path = typer.Argument(..., help="Path to the paper."),
+    paper: str = typer.Argument(..., help="Path OR URL to the paper."),
     verbose: bool = typer.Option(False, "--verbose", "-v"),
 ) -> None:
     """Run ONLY the deterministic statistical forensics (offline, no keys)."""
     setup_logging("DEBUG" if verbose else "WARNING")
     from econoclast.forensics import run_forensics
+    from econoclast.ingest.fetch import is_url
     from econoclast.ingest.paper import load_paper
 
-    if not paper.exists():
-        console.print(f"[red]File not found:[/red] {paper}")
+    if not is_url(paper) and not Path(paper).exists():
+        console.print(f"[red]Not found:[/red] {paper}")
         raise typer.Exit(1)
 
     p = load_paper(paper)
@@ -132,7 +138,7 @@ def forensics(
 
 @app.command()
 def claims(
-    paper: Path = typer.Argument(..., help="Path to the paper."),
+    paper: str = typer.Argument(..., help="Path OR URL to the paper."),
     limit: int = typer.Option(60, "--limit", "-n"),
 ) -> None:
     """Dump the statistical claims Econoclast extracted (for debugging extraction)."""
@@ -195,6 +201,116 @@ def ui() -> None:
     app_path = _P(__file__).parent / "ui" / "app.py"
     console.print("[bold]Launching Econoclast UI…[/bold] (Ctrl-C to stop)")
     subprocess.run([sys.executable, "-m", "streamlit", "run", str(app_path)])
+
+
+@app.command()
+def replicate(
+    config: Path | None = typer.Argument(None, help="Replication spec config (YAML)."),
+    init: Path | None = typer.Option(None, "--init", help="Generate a template config from this dataset."),
+    out: Path | None = typer.Option(None, "--out", "-o", help="Output dir (review) or config path (--init)."),
+    no_plot: bool = typer.Option(False, "--no-plot", help="Skip the specification-curve plot."),
+    verbose: bool = typer.Option(False, "--verbose", "-v"),
+) -> None:
+    """Run a specification-curve / multiverse replication (needs the dataset)."""
+    setup_logging("DEBUG" if verbose else "INFO")
+    import json as _json
+
+    from econoclast.replication import (
+        SpecConfig,
+        replication_findings,
+        run_replication,
+        template_config,
+    )
+
+    if init is not None:
+        cfg = template_config(str(init))
+        dest = out or Path("econoclast-spec.yaml")
+        Path(dest).write_text(cfg.to_yaml(), encoding="utf-8")
+        console.print(f"[green]Wrote template config:[/green] {dest}")
+        console.print("[dim]Fill in outcome/treatment/controls_pool (and RDD/DiD fields), then "
+                      "run `econoclast replicate " + str(dest) + "`.[/dim]")
+        return
+
+    if config is None or not Path(config).exists():
+        console.print("[red]Provide a spec config YAML, or use --init <data> to generate one.[/red]")
+        raise typer.Exit(1)
+
+    spec = SpecConfig.from_yaml(config)
+    with console.status("[bold]Running the multiverse…[/bold]"):
+        result = run_replication(spec)
+
+    summ = result.get("spec_curve", {}).get("summary", {})
+    share = summ.get("share_significant_expected_sign", 0)
+    style = "bold red" if share < 0.5 else ("yellow" if share < 0.8 else "green")
+    console.print(Panel(
+        Text(f"{summ.get('n_specs_run', 0)} specifications · "
+             f"{share:.0%} significant in the expected direction\n"
+             f"coef median {summ.get('median_coef')}  range [{summ.get('min_coef')}, {summ.get('max_coef')}]",
+             style=style),
+        title="Specification curve", border_style=style))
+    for f in replication_findings(result):
+        console.print(f"  [{_SEV_STYLE.get(f.severity,'')}]{f.severity}[/]: {f.title}")
+
+    out_dir = out or Path("econoclast-replication")
+    out_dir.mkdir(parents=True, exist_ok=True)
+    (out_dir / "replication.json").write_text(_json.dumps(result, indent=2), encoding="utf-8")
+    written = [out_dir / "replication.json"]
+    if not no_plot:
+        from econoclast.replication.models import SpecCurve
+        from econoclast.replication.plot import plot_spec_curve
+
+        curve = SpecCurve.from_dict(result.get("spec_curve", {}))
+        p = plot_spec_curve(curve, str(out_dir / "spec_curve.png"))
+        if p:
+            written.append(Path(p))
+    console.print("\n[dim]Wrote:[/dim] " + ", ".join(str(p) for p in written))
+
+
+@app.command()
+def setup(
+    backend: str = typer.Option("auto", "--backend", "-b", help="auto | claude | codex | api | none"),
+    no_blind: bool = typer.Option(False, "--no-blind", help="Don't blind author identity."),
+    no_literature: bool = typer.Option(False, "--no-literature", help="Disable online literature retrieval."),
+    corpus: Path | None = typer.Option(None, "--corpus", help="Folder of your own papers to ground reviews."),
+    install_mcp: bool = typer.Option(True, "--mcp/--no-mcp", help="Register Econoclast with Claude Code / Codex."),
+    yes: bool = typer.Option(False, "--yes", "-y", help="Non-interactive: accept defaults/flags (for agents)."),
+    out: Path | None = typer.Option(None, "--out", "-o", help="Where to write econoclast.yaml."),
+) -> None:
+    """One-time setup: detect backends, write config, and register the MCP tool."""
+    setup_logging("WARNING")
+    from econoclast.setup_wizard import detect_environment, run_setup
+
+    env = detect_environment()
+    keys = ", ".join(k for k, v in env["api_keys"].items() if v) or "none"
+    console.print(Panel(
+        f"API keys: [bold]{keys}[/bold]\n"
+        f"Claude Code CLI: [bold]{'✅' if env['claude'] else '—'}[/bold]   "
+        f"Codex CLI: [bold]{'✅' if env['codex'] else '—'}[/bold]\n"
+        f"Recommended backend: [bold]{env['recommended_backend']}[/bold]",
+        title="Detected environment"))
+
+    blind, literature = not no_blind, not no_literature
+    interactive = not yes and sys.stdin.isatty()
+    if interactive:
+        backend = typer.prompt("Backend (auto/claude/codex/api/none)",
+                               default=backend if backend != "auto" else env["recommended_backend"])
+        blind = typer.confirm("Blind author identity during LLM review? (recommended)", default=True)
+        literature = typer.confirm("Retrieve related literature online?", default=True)
+        c = typer.prompt("Folder of your own papers to ground reviews (blank = none)", default="")
+        corpus = Path(c) if c.strip() else None
+        if env["claude"] or env["codex"]:
+            install_mcp = typer.confirm("Register Econoclast as a tool in Claude Code / Codex?", default=True)
+
+    res = run_setup(backend=backend, blind=blind, literature=literature,
+                    corpus=str(corpus) if corpus else None, install_mcp=install_mcp,
+                    out=str(out) if out else None)
+
+    console.print(f"\n[green]Backend:[/green] {res['backend']}")
+    for a in res["actions"]:
+        console.print(f"  ✓ {a}")
+    console.print("\n[bold]Next:[/bold]")
+    for s in res["next_steps"]:
+        console.print(f"  • {s}")
 
 
 @app.command()

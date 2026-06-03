@@ -54,6 +54,7 @@ class Econoclast:
         use_llm: bool = True,
         use_literature: bool = True,
         blind: bool = True,
+        replication_config: str | None = None,
         max_workers: int = 6,
         progress=None,
     ) -> Report:
@@ -124,6 +125,25 @@ class Econoclast:
                 recommendation="Inspect the manuscript source for hidden/white/zero-width text aimed at influencing an automated reviewer.",
             ))
 
+        # Replication mode: re-estimate the result across a multiverse of specs.
+        replication_summary = None
+        if replication_config:
+            if progress:
+                progress("replication: running specification curve")
+            try:
+                from econoclast.replication import (
+                    SpecConfig,
+                    replication_findings,
+                    run_replication,
+                )
+
+                rep = run_replication(SpecConfig.from_yaml(replication_config))
+                findings.extend(replication_findings(rep))
+                replication_summary = rep.get("spec_curve", {}).get("summary")
+                ctx.notes["replication"] = rep
+            except Exception as exc:  # noqa: BLE001
+                log.warning("Replication failed: %s", exc)
+
         forensic_dicts = [r.to_dict() for r in _ordered(ctx.forensic_results)]
         fragility = compute_fragility(findings, forensic_dicts)
         referee = synthesize_referee(ctx, findings, fragility)
@@ -149,6 +169,7 @@ class Econoclast:
                 "attacks_skipped": skipped,
                 "n_literature": len(ctx.literature),
                 "injection_warnings": len(injections),
+                "replication": replication_summary,
             },
         )
         log.info("Review complete: fragility %s/100 (%s), %d findings",

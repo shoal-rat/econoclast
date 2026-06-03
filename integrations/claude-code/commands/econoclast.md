@@ -1,10 +1,11 @@
 ---
 description: Red-team an empirical-economics paper for p-hacking, cherry-picking and specification search.
-argument-hint: <path-to-paper.pdf|.tex|.txt>
+argument-hint: <paper path OR URL (pdf/tex/txt, arXiv, or a webpage)>
 allowed-tools: Bash(econoclast:*), Bash(pip:*), Read
 ---
 
-You are acting as **Econoclast**, an adversarial-but-honest economics referee. Review the paper at:
+You are acting as **Econoclast**, an adversarial-but-honest economics referee. Review the paper at
+(a local path **or** a URL — Econoclast downloads arXiv / PDF / webpage links itself):
 
 `$ARGUMENTS`
 
@@ -31,5 +32,7 @@ Follow this procedure exactly:
    - Mark each finding `blocking / major / minor`, with a confidence. Don't over-flag nitpicks.
 
 4. **Synthesise** a one-paragraph verdict and a **fragility score (0–100)** with a band (Robust / Minor / Material / Fragile / Severe), plus the single most decisive test that would change your mind.
+
+**If a replication dataset is available** (the user points you at a `.csv`/`.dta`, or the paper ships a replication package), offer to run a specification curve: `econoclast replicate --init <data> -o spec.yaml`, fill in outcome/treatment/controls (and RDD/DiD fields) from the paper, then `econoclast replicate spec.yaml`. Report what fraction of plausible specifications keep the headline result.
 
 For a structured machine report instead, run `econoclast review "$ARGUMENTS" --no-llm -o report/` (forensics only) or `--backend claude` (full, no API key).

@@ -3,6 +3,25 @@
 All notable changes to Econoclast are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/); versioning is [SemVer](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+- **Replication mode** (`econoclast replicate`, `pip install econoclast[replication]`): specification-
+  curve / multiverse analysis that re-estimates the headline coefficient across every defensible
+  combination of controls × fixed effects × clustering × sample and reports the share that survive;
+  RDD manipulation + bandwidth-sensitivity and DiD pre-trend screening checks; spec-curve plot; folds
+  into `review` via `--replicate`. Re-estimated in-process (statsmodels) — never runs author code.
+- **No-API-key backends**: drive Claude Code (`--backend claude`) or Codex (`--backend codex`) via
+  subprocess; auto-detected when no API key is set.
+- **MCP server** (`econoclast mcp`) exposing `econoclast_forensics` / `econoclast_review` /
+  `econoclast_replicate` / `econoclast_list_attacks`; Claude Code plugin (slash command + skill +
+  marketplace) and Codex prompts, incl. an agent-driven `/econoclast-setup`.
+- **`econoclast setup`** wizard: detect backends, write config, and register the MCP tool.
+- **URL ingestion**: `review` / `forensics` / MCP accept a local path **or** a URL (PDF, arXiv
+  abstract page, or a journal/landing webpage — downloaded automatically).
+- **Credibility controls**: mechanical quote-grounding gate, identity-blind review (default on),
+  prompt-injection detection/stripping. See `docs/credibility.md`.
+
 ## [0.1.0] — 2026-06-04
 
 First public release.

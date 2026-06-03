@@ -85,6 +85,16 @@ econoclast ui
 
 ## 🔌 One-click / no-API-key setup (Claude Code & Codex)
 
+**The simplest flow** — install once, let the agent set itself up, then just hand it a path or a URL:
+
+```bash
+pip install "econoclast[all] @ git+https://github.com/shoal-rat/econoclast"
+econoclast setup        # detects your backend, writes config, registers the MCP tool
+```
+…or, inside Claude Code / Codex, run `/econoclast-setup` and answer two or three questions — the agent
+does the rest. After that, just say **"review &lt;file path or paper URL&gt;"** (yes, an arXiv/journal URL
+works — Econoclast downloads it).
+
 Already have **Claude Code** or **Codex** installed and logged in? Then you don't need any API key —
 Econoclast can use your subscription, or run *inside* the agent. Three ways:
 
@@ -159,6 +169,26 @@ must quote the paper) and **design-gated** (the RDD critique only fires on an RD
 
 Run `econoclast attacks` to list them, or `--attacks statcheck,caliper` to run a subset.
 See [docs/attacks.md](docs/attacks.md) for the algorithms and references behind each one.
+
+---
+
+## 🔁 Replication mode — does the result survive the multiverse?
+
+The PDF-only checks can't tell you whether the headline holds under *different* analytic choices. Give
+Econoclast the data and it re-estimates the result across a **specification curve / multiverse** —
+every defensible combination of controls, fixed effects, clustering and sample — and reports what
+fraction keep the result. (It runs the regressions itself; it never executes the authors' code.)
+
+```bash
+pip install "econoclast[replication]"
+econoclast replicate --init data.csv -o spec.yaml   # template from your columns; the agent fills it in
+econoclast replicate spec.yaml -o out/              # → spec-curve plot + JSON + findings
+# or fold it into a review:  econoclast review paper.pdf --replicate spec.yaml
+```
+
+> *"Significant in only 22% of 1,800 plausible specifications"* is a far stronger statement than any
+> single regression table. Plus RDD manipulation/bandwidth and DiD pre-trend checks when the design
+> fields are set. Details in [docs/replication.md](docs/replication.md).
 
 ---
 
@@ -270,11 +300,15 @@ before quoting any finding.
 
 ## 🗺️ Roadmap
 
-- [ ] Replication mode: sandboxed re-execution of authors' code + automatic specification curves
-- [ ] RDD density (McCrary / Cattaneo-Jansson-Ma) and staggered-DiD (Callaway-Sant'Anna) re-estimation
+- [x] Replication mode: specification-curve / multiverse analysis (re-estimated in-process)
+- [x] RDD manipulation/bandwidth + DiD pre-trend screening checks
+- [x] Run inside Claude Code / Codex (MCP, slash command, skill) with no API key
+- [x] Accept a path **or** a URL (arXiv / PDF / journal webpage)
+- [ ] Sandboxed re-execution of the authors' *actual* code (the package, not our re-estimation)
+- [ ] Full McCrary / Cattaneo-Jansson-Ma density and Callaway-Sant'Anna / Sun-Abraham estimators
 - [ ] SPRITE / DEBIT reconstructions; PET-PEESE & Andrews-Kasy selection models for meta-analyses
-- [ ] GROBID / `marker` ingestion for hard PDF layouts
-- [ ] Batch mode over a folder / a journal issue
+- [ ] Mechanical citation verification; N-model ensembling with majority vote
+- [ ] GROBID / `marker` ingestion for hard PDF layouts; batch mode over a folder / journal issue
 
 ---
 

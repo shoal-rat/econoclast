@@ -6,6 +6,7 @@ import re
 from pathlib import Path
 
 from econoclast.ingest.claims import extract_claims_from_paper
+from econoclast.ingest.fetch import is_url, resolve_source
 from econoclast.ingest.latex import extract_latex
 from econoclast.ingest.models import Paper, Section
 from econoclast.ingest.pdf import extract_pdf
@@ -27,6 +28,8 @@ _NUMBERED_RE = re.compile(r"^\s*(\d+(?:\.\d+){0,2})\.?\s+[A-Z][A-Za-z].{0,60}$")
 
 
 def load_paper(path: str | Path) -> Paper:
+    if isinstance(path, str) and is_url(path):
+        path = resolve_source(path)  # download URL/arXiv/landing page to a local file
     p = Path(path)
     if not p.exists():
         raise FileNotFoundError(path)

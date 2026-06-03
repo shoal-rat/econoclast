@@ -9,10 +9,12 @@ Use this skill to referee an empirical paper like a hostile-but-fair editor. It 
 
 ## Step 1 — deterministic forensics (tool)
 
-Prefer the MCP tool `econoclast_forensics(path)` if it is available. Otherwise shell out:
+Prefer the MCP tool `econoclast_forensics(path)` if it is available. Otherwise shell out. The
+argument can be a local path **or a URL** (PDF, arXiv abstract page, or a paper webpage) — Econoclast
+downloads it:
 
 ```bash
-econoclast forensics "<paper path>"      # pip install econoclast  (econoclast[pdf] for PDFs)
+econoclast forensics "<paper path or URL>"   # pip install econoclast  (econoclast[pdf] for PDFs)
 ```
 
 This recomputes p-values from test statistics (statcheck), checks whether reported means/SDs are even possible (GRIM/GRIMMER), and runs p-curve, caliper (z-statistic bunching near 1.96), TIVA, Benford and terminal-digit tests. A `suspicious` verdict here is arithmetic — high confidence. Note the extracted claim count and the auto-detected design (DiD/RDD/IV/…).
@@ -27,6 +29,15 @@ Read the paper and raise findings in these categories, **each grounded in a verb
 - **robustness coverage** — which standard checks are missing, and are the missing ones the dangerous ones?
 - **HARKing** — mechanisms/hypotheses that read as post-hoc.
 - **over-claiming** — abstract/conclusion claims the design can't support.
+
+## Step 2.5 — replication (when data is available)
+
+If the user provides a dataset or the paper ships a replication package, run a specification curve:
+`econoclast replicate --init <data.csv> -o spec.yaml`, fill `outcome`/`treatment`/`controls_pool`
+(and `running_var`/`cutoff` for RDD, or `unit`/`time`/`treated`/`treat_time` for DiD) from the paper,
+then `econoclast replicate spec.yaml` (or the `econoclast_replicate` MCP tool). Report what fraction
+of equally-defensible specifications keep the headline result significant in the claimed direction —
+a low fraction is strong evidence of specification search.
 
 ## Step 3 — process rules (non-negotiable)
 

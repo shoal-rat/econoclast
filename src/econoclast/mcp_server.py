@@ -46,7 +46,7 @@ def build_server():
         terminal-digit tests on the numbers in the paper.
 
         Args:
-            path: path to a .pdf, .tex, or .txt paper.
+            path: local path OR a URL (PDF, arXiv abstract page, or paper webpage).
         Returns:
             extracted designs, claim count, and one result per forensic test.
         """
@@ -92,6 +92,30 @@ def build_server():
         eco = Econoclast(settings=settings, force_mock=(backend == "mock"))
         report = eco.review(Path(path), use_llm=use_llm, use_literature=use_llm)
         return report.to_dict()
+
+    @mcp.tool()
+    def econoclast_replicate(spec_config_path: str) -> dict:
+        """Run a specification-curve / multiverse replication from a spec config (YAML).
+
+        Needs the dataset. The config names the data file, outcome, treatment, and the
+        pools of controls / fixed-effects / clustering / sample filters to vary; Econoclast
+        runs every combination and reports how often the headline result survives. Generate
+        a starter config with the CLI: `econoclast replicate --init <data.csv>`.
+
+        Args:
+            spec_config_path: path to a replication spec YAML.
+        Returns:
+            the spec-curve summary, any RDD/DiD checks, and derived findings.
+        """
+        from econoclast.replication import (
+            SpecConfig,
+            replication_findings,
+            run_replication,
+        )
+
+        result = run_replication(SpecConfig.from_yaml(spec_config_path))
+        result["findings"] = [f.to_dict() for f in replication_findings(result)]
+        return result
 
     @mcp.tool()
     def econoclast_list_attacks() -> list[dict]:

@@ -69,3 +69,32 @@ def test_quote_grounding():
     assert quote_supported(paper, "we focus on the 2009-2013 window") is True
     assert quote_supported(paper, "the authors randomized treatment across villages") is False
     assert quote_supported(paper, "tiny") is True  # too short to penalise
+
+
+# ------------------------------------------------------------------- fetch/URL
+def test_url_detection_and_arxiv_canonicalize():
+    from econoclast.ingest.fetch import _canonicalize, is_url
+
+    assert is_url("https://arxiv.org/abs/2401.12345") is True
+    assert is_url("/local/path.pdf") is False
+    assert _canonicalize("https://arxiv.org/abs/2401.12345") == "https://arxiv.org/pdf/2401.12345.pdf"
+
+
+def test_html_to_text_and_pdf_link():
+    from econoclast.ingest.fetch import _find_pdf_link, _html_to_text
+
+    html = ('<html><head><meta name="citation_pdf_url" content="https://x.org/p.pdf"></head>'
+            '<body><script>bad()</script><p>Hello <b>world</b></p></body></html>')
+    assert "Hello world" in _html_to_text(html)
+    assert _find_pdf_link(html, "https://x.org/") == "https://x.org/p.pdf"
+
+
+# ----------------------------------------------------------------------- setup
+def test_setup_detect_and_build_config():
+    from econoclast.setup_wizard import build_config, detect_environment
+
+    env = detect_environment()
+    assert set(env) >= {"api_keys", "claude", "codex", "recommended_backend"}
+    cfg = build_config("claude", blind=True, literature=False, corpus=None)
+    assert "models" in cfg and "attacker" in cfg["models"]
+    assert cfg["literature"]["enabled"] is False
