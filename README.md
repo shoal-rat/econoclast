@@ -16,16 +16,19 @@ story forward as if that path was the only sensible one. Econoclast plays the ot
 game. It re-derives the numbers in the paper, hunts for the choices that were quietly made, finds and
 re-runs the data when the data is public, and tells you how much of the headline actually survives.
 
-Point it at a paper and it does the rest:
+You are meant to ask once and let it finish. Inside Claude Code or Codex you can just say "check this
+paper for me" with a link, and the agent works out what it needs, asks you in plain words for anything
+missing (you do not need to know any of the tech), runs the whole thing, and explains the result in
+plain language. From a terminal it is one command:
 
 ```bash
 econoclast verify https://arxiv.org/abs/2401.12345
 ```
 
-That single command downloads the paper, runs the offline statistical checks, runs the model
-critique, looks in the paper for a public dataset, downloads it, works out which regression is the
-headline result, and re-runs it across hundreds of defensible specifications. Out comes a fragility
-score and a list of specific, quotable problems.
+That downloads the paper, runs the offline statistical checks and the model critique, researches any
+method it does not already cover, looks in the paper for a public dataset, downloads it, works out
+which regression is the headline result, and re-runs it across hundreds of defensible specifications.
+Out comes a fragility score and a list of specific, quotable problems.
 
 ## Two layers
 
@@ -47,11 +50,17 @@ subscription with no separate key.
 
 ## Install
 
+One command installs everything and registers the agent tool:
+
 ```bash
-# Until the PyPI release, install from the repo:
-pip install "git+https://github.com/shoal-rat/econoclast"
-# everything (PDF, UI, MCP, replication, LiteLLM):
+curl -fsSL https://raw.githubusercontent.com/shoal-rat/econoclast/main/install.sh | bash
+```
+
+Or with pip:
+
+```bash
 pip install "econoclast[all] @ git+https://github.com/shoal-rat/econoclast"
+econoclast setup     # detect your backend, write the config, register the MCP tool
 ```
 
 Try the offline checks on the bundled demo. No keys needed:
@@ -237,19 +246,6 @@ is why each one ships with the quote it rests on. The replication runs your spec
 multiverse, so the agent has to read the variables off the paper correctly, and the estimators are
 screening tools rather than a copy of the authors' exact pipeline. Do not paste a fragility score into
 a public accusation.
-
-## Roadmap
-
-- [x] Specification-curve and multiverse replication, re-estimated in process
-- [x] McCrary density test, Callaway-Sant'Anna and Sun-Abraham, Goodman-Bacon diagnostic
-- [x] Mechanical citation verification against Crossref
-- [x] Multi-model ensemble voting on findings
-- [x] One-line `verify`: fetch the paper, find and download the data, run everything
-- [x] Runs inside Claude Code and Codex, no API key; takes a path or a URL
-- [x] GROBID ingestion, opt-in author-code reproduction, and batch mode over a folder
-- [ ] Cattaneo-Jansson-Ma (`rddensity`) and doubly-robust Callaway-Sant'Anna with covariates
-- [ ] A proper container sandbox for author-code reproduction
-- [ ] PyPI release and a hosted demo
 
 ## Contributing
 

@@ -64,9 +64,14 @@ def _paper_brief(ctx: AttackContext, *, max_chars: int = 16000) -> str:
     body = "\n\n".join(keyparts) or p.text
     body = body[:max_chars]
     claims = _claims_table(ctx)
+    comp = ctx.notes.get("comprehension") or {}
+    claim_line = ""
+    if comp.get("headline_claim"):
+        claim_line = f"HEADLINE CLAIM (as read by the model): {comp['headline_claim']}\n"
     brief = (
         f"TITLE: {p.title}\n"
         f"DESIGN (auto-detected): {design_label(ctx.designs)}\n"
+        f"{claim_line}"
         f"ABSTRACT: {p.abstract[:1500]}\n\n"
         f"KEY SECTIONS (truncated):\n{body}\n\n"
         f"EXTRACTED ESTIMATES (by Econoclast):\n{claims}"

@@ -58,16 +58,27 @@ class Econoclast:
         deep: bool = False,
         allow_code: bool = False,
         data_path: str | None = None,
+        comprehension: dict | None = None,
         replication_config: str | None = None,
         max_workers: int = 6,
         progress=None,
     ) -> Report:
+        from econoclast.agent.comprehend import comprehend, merge_designs
         from econoclast.attacks.designs import detect_methods
 
         paper = load_paper(paper_path)
         designs = detect_designs(paper.text)
         methods = detect_methods(paper.text)
-        log.info("Detected design(s): %s | method(s): %s", design_label(designs), ", ".join(sorted(methods)) or "-")
+
+        # Let the model read the paper and decide, when one is available.
+        comp = comprehension
+        if comp is None and use_llm and self.router.is_live():
+            if progress:
+                progress("reading the paper")
+            comp = comprehend(paper, self.router)
+        if comp:
+            designs = merge_designs(designs, comp)
+        log.info("Design(s): %s | method(s): %s", design_label(designs), ", ".join(sorted(methods)) or "-")
 
         ctx = AttackContext(
             paper=paper,
@@ -82,6 +93,8 @@ class Econoclast:
             allow_code=allow_code,
             data_path=data_path,
         )
+        if comp:
+            ctx.notes["comprehension"] = comp
         paper_norm = normalize_for_match(paper.text)
 
         if use_literature and self.searcher is not None:
@@ -218,13 +231,22 @@ class Econoclast:
         paper_file = resolve_source(str(source), cache_dir=self.settings.cache_dir)
         paper = load_paper(paper_file)
 
+        # Read the paper once with the model; reuse it for data discovery and the review.
+        comp = None
+        if use_llm and self.router.is_live():
+            from econoclast.agent.comprehend import comprehend
+
+            if progress:
+                progress("reading the paper")
+            comp = comprehend(paper, self.router)
+
         info = {"requested": True, "provided": bool(data), "found": bool(data),
                 "source": "provided" if data else None, "autoconfig": False, "note": ""}
         data_path = data
         if not data_path:
             if progress:
                 progress("looking for the paper's dataset")
-            data_path, src = self._acquire_dataset(paper, progress)
+            data_path, src = self._acquire_dataset(paper, comp, progress)
             info["found"] = bool(data_path)
             info["source"] = src
 
@@ -246,25 +268,29 @@ class Econoclast:
 
         report = self.review(
             paper_file, use_llm=use_llm, use_literature=use_literature, blind=blind,
-            deep=deep, allow_code=allow_code, data_path=data_path,
+            deep=deep, allow_code=allow_code, data_path=data_path, comprehension=comp,
             replication_config=spec_path, max_workers=max_workers, progress=progress,
         )
         report.meta["dataset"] = info
         return report
 
-    def _acquire_dataset(self, paper, progress) -> tuple[str | None, str | None]:
+    def _acquire_dataset(self, paper, comp, progress) -> tuple[str | None, str | None]:
         from econoclast.replication.acquire import (
             acquire_dataset,
             find_tabular_files,
             pick_main_table,
         )
-        from econoclast.replication.discover import find_dataset_links
+        from econoclast.replication.discover import DataLink, find_dataset_links
 
-        links = find_dataset_links(paper)
+        # Prefer the data links the model found, then the keyword-detected ones.
+        links = [DataLink(kind="direct", ref=u, url=u, score=3.0)
+                 for u in (comp or {}).get("data_links", [])[:4]
+                 if isinstance(u, str) and u.lower().startswith("http")]
+        links += find_dataset_links(paper)
         if not links:
             return None, None
         work = self.settings.cache_path() / "data"
-        for link in links[:4]:
+        for link in links[:5]:
             if progress:
                 progress(f"fetching dataset: {link.kind} {link.ref[:40]}")
             try:

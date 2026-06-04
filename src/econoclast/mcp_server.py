@@ -94,6 +94,25 @@ def build_server():
         return report.to_dict()
 
     @mcp.tool()
+    def econoclast_intake(request: str) -> dict:
+        """Understand a free-text request and return what to ask the user, if anything.
+
+        Call this first when a non-technical user asks you to check a paper. It works out
+        what they already gave (a paper link/path, a dataset, a specific claim) and returns
+        a short list of plain-language questions for whatever is missing. If `ready` is true,
+        go straight to econoclast_verify with the understood paper (and data, if any).
+
+        Args:
+            request: the user's message, verbatim.
+        Returns:
+            {understood: {paper, paper_kind, data, claim}, questions: [...], ready: bool, next: str}
+        """
+        from econoclast.agent.intake import build_intake
+        from econoclast.config import Settings
+
+        return build_intake(request, Settings.load())
+
+    @mcp.tool()
     def econoclast_verify(paper: str, data: str = "") -> dict:
         """Autonomous end-to-end verification of an empirical paper.
 

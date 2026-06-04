@@ -9,7 +9,8 @@ description = "A multi-model AI agent that red-teams empirical-economics papers 
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
-authors = [{ name = "Econoclast contributors" }]
+authors = [{ name = "shoal-rat" }]
+maintainers = [{ name = "shoal-rat" }]
 keywords = [
     "economics", "econometrics", "p-hacking", "research-integrity",
     "peer-review", "llm", "agent", "specification-curve", "replication",

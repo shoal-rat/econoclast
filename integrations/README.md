@@ -1,8 +1,9 @@
 # Using Econoclast inside Claude Code & Codex
 
-Econoclast is built to be used *by an agent you're already talking to*. The most efficient pattern:
-the agent runs Econoclast's **free, offline statistical forensics** as a tool, then does the
-adversarial *reasoning* itself — so there are no extra API calls and no extra API keys.
+Econoclast is built to be talked to. A non-technical user says "check this paper for me" with a link,
+and the agent works out what it needs, asks for anything missing in plain words, runs the whole check,
+and explains the result in plain language. The `econoclast_intake` MCP tool turns a free-text request
+into a short list of questions to ask; `econoclast_verify` then does everything in one call.
 
 There are three ways to wire it up.
 

@@ -1,0 +1,18 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Econoclast paper comprehension",
+  "description": "The model's factual reading of a paper, used to drive design gating, dataset discovery, and the specification config. Produced by agent/comprehend.py.",
+  "type": "object",
+  "properties": {
+    "design": { "type": "string", "description": "e.g. difference-in-differences, regression discontinuity, instrumental variables, synthetic control, structural, RCT, panel FE, descriptive" },
+    "methods": { "type": "array", "items": { "type": "string" } },
+    "headline_claim": { "type": "string", "description": "one sentence: the main empirical result" },
+    "claimed_direction": { "enum": [1, -1, 0] },
+    "outcome": { "type": "string" },
+    "treatment": { "type": "string", "description": "the focal regressor" },
+    "data_links": { "type": "array", "items": { "type": "string" }, "description": "URLs/DOIs to data or code" },
+    "data_availability": { "type": "string" },
+    "uses_public_data": { "type": "boolean" }
+  },
+  "required": ["design", "headline_claim"]
+}

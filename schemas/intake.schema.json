@@ -1,0 +1,32 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Econoclast intake",
+  "description": "What the agent understood from a free-text request, plus what to ask the user. Returned by the econoclast_intake MCP tool and agent/intake.py.",
+  "type": "object",
+  "properties": {
+    "understood": {
+      "type": "object",
+      "properties": {
+        "paper": { "type": "string", "description": "a URL, file path, or title; empty if none given" },
+        "paper_kind": { "enum": ["url", "path", "title", "none"] },
+        "data": { "type": "string", "description": "a dataset path/URL the user supplied, or empty" },
+        "claim": { "type": "string", "description": "the specific result to stress-test, or empty" }
+      },
+      "required": ["paper", "paper_kind"]
+    },
+    "questions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "ask": { "type": "string", "description": "a plain-language question for the user" },
+          "required": { "type": "boolean" }
+        },
+        "required": ["ask", "required"]
+      }
+    },
+    "ready": { "type": "boolean", "description": "true if a paper is known and the run can proceed" },
+    "next": { "enum": ["verify", "ask_user"] }
+  },
+  "required": ["understood", "questions", "ready", "next"]
+}

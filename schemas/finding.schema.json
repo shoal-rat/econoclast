@@ -1,0 +1,24 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Econoclast finding",
+  "description": "One issue raised by a check. Every model finding must carry a verbatim quote in evidence; ungrounded findings are down-weighted. Mirrors attacks/base.py Finding.",
+  "type": "object",
+  "properties": {
+    "id": { "type": "string" },
+    "attack": { "type": "string", "description": "the check that produced it" },
+    "title": { "type": "string" },
+    "category": {
+      "enum": ["reporting_inconsistency", "p_hacking", "cherry_picking", "specification_search",
+               "identification", "robustness", "harking", "publication_bias", "data_integrity",
+               "overclaiming", "literature"]
+    },
+    "severity": { "enum": ["info", "low", "medium", "high", "critical"] },
+    "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+    "detail": { "type": "string" },
+    "evidence": { "type": "array", "items": { "type": "string" }, "description": "verbatim quotes from the paper" },
+    "recommendation": { "type": "string" },
+    "locations": { "type": "array", "items": { "type": "string" } },
+    "weight": { "type": "number", "description": "severity x confidence; feeds the fragility score" }
+  },
+  "required": ["attack", "title", "category", "severity", "confidence", "detail"]
+}

@@ -5,6 +5,19 @@ All notable changes to Econoclast are documented here. Format follows
 
 ## [Unreleased]
 
+### Added (talk once, let the AI decide)
+- Conversational intake: `agent/intake.py` + the `econoclast_intake` MCP tool turn a free-text request
+  into a structured understanding plus a short list of plain-language questions, so a non-technical
+  user can be served in one message.
+- AI comprehension: `agent/comprehend.py` reads the paper with the model and decides the design,
+  methods, headline claim and direction, variables, and dataset links, then drives design-gating,
+  dataset discovery, and the critique. Keyword detection is the fallback when no model is configured.
+- The Claude Code skill/command and the Codex prompt are rewritten as a one-shot playbook: ask only
+  what is missing, run `econoclast verify`, and explain the result in plain language.
+- Project structure to match the maintainer's agent projects: a root `CLAUDE.md`, an `install.sh`
+  one-command setup, and `schemas/` (intake, comprehension, finding, report). README roadmap removed;
+  authorship set to shoal-rat.
+
 ### Added (research-then-verify, instead of hardcoding every method)
 - The agent now researches methods it does not cover. `detect_methods` + `method_coverage` split a
   paper's estimators into built-in checks vs ones that need research; for the latter, Econoclast

@@ -3,7 +3,7 @@ title: "Econoclast: an adversarial AI referee for empirical economics"
 message: "If you use this software, please cite it."
 type: software
 authors:
-  - alias: shoal-rat
+  - name: "shoal-rat"
 repository-code: "https://github.com/shoal-rat/econoclast"
 url: "https://github.com/shoal-rat/econoclast"
 license: MIT

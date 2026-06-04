@@ -1,0 +1,35 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Econoclast report",
+  "description": "The full output of a review. Mirrors report/models.py Report.to_dict() (schema id econoclast.report/v1).",
+  "type": "object",
+  "properties": {
+    "schema": { "const": "econoclast.report/v1" },
+    "paper": {
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "path": { "type": "string" },
+        "source_format": { "type": "string" },
+        "designs": { "type": "array", "items": { "type": "string" } },
+        "n_claims": { "type": "integer" }
+      }
+    },
+    "fragility": {
+      "type": "object",
+      "properties": {
+        "score": { "type": "number", "minimum": 0, "maximum": 100 },
+        "band": { "enum": ["Robust", "Minor concerns", "Material concerns", "Fragile", "Severe"] },
+        "integrity_violation": { "type": "boolean" },
+        "by_category": { "type": "object" },
+        "by_severity": { "type": "object" }
+      },
+      "required": ["score", "band"]
+    },
+    "referee": { "type": "object", "description": "headline, assessment, what_would_change_my_mind" },
+    "findings": { "type": "array", "items": { "$ref": "finding.schema.json" } },
+    "forensics": { "type": "array", "description": "one result per deterministic test" },
+    "meta": { "type": "object", "description": "version, models, usage/cost, attacks run, methods, dataset, deep" }
+  },
+  "required": ["schema", "paper", "fragility", "findings"]
+}
