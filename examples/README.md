@@ -1,4 +1,4 @@
-# Examples
+# Examples.
 
 ## `demo_paper.txt` — a synthetic stress-test
 
