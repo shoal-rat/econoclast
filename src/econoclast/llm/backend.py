@@ -37,6 +37,11 @@ def _fetch_order(work_dir: str, *, url: str, what: str) -> str:
         "Cloudflare or JavaScript challenge, or a cookie wall). Get past it with whatever tools you "
         "have: drive a browser if you have one (a Playwright or Chrome MCP, or the Chrome extension), "
         "or use curl/wget with a real browser User-Agent and the site's cookies.\n\n"
+        "If you have no browser tool, equip yourself: you may install one. For next time, add the "
+        "Playwright MCP (`claude mcp add playwright -- npx -y @playwright/mcp@latest`, or the equivalent "
+        "`[mcp_servers.playwright]` block in ~/.codex/config.toml). For THIS task, you can script a "
+        "headless browser right now, for example with `npx -y playwright` or `pip install playwright "
+        "&& playwright install chromium`, and use it to fetch the file.\n\n"
         "If that exact URL is dead or wrong and you were given a description, search the web for it, "
         "find the official source (the publisher or author page, or a data repository such as Zenodo, "
         "Dataverse, OSF, or ICPSR), and download the correct file from there.\n\n"
@@ -68,6 +73,7 @@ class Backend:
         temperature: float | None = None,
         max_tokens: int = 4096,
         stop: list[str] | None = None,
+        json_schema: dict | None = None,
     ) -> LLMResponse:
         temp = _ROLE_TEMPERATURE.get(role, 0.2) if temperature is None else temperature
         resp = self.provider.complete(
@@ -78,6 +84,7 @@ class Backend:
             response_format=response_format,
             stop=stop,
             timeout=self.timeout,
+            json_schema=json_schema,
         )
         with self._lock:
             self.total_usage = self.total_usage + resp.usage

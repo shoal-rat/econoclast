@@ -29,6 +29,23 @@ _CONTRACT = (
     '"data_availability": str (the data-availability statement, or ""), "uses_public_data": bool}'
 )
 
+# A JSON Schema so Claude Code can guarantee the shape (--json-schema); Codex ignores it.
+_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "design": {"type": "string"},
+        "methods": {"type": "array", "items": {"type": "string"}},
+        "headline_claim": {"type": "string"},
+        "claimed_direction": {"type": "integer", "enum": [-1, 0, 1]},
+        "outcome": {"type": "string"},
+        "treatment": {"type": "string"},
+        "data_links": {"type": "array", "items": {"type": "string"}},
+        "data_availability": {"type": "string"},
+        "uses_public_data": {"type": "boolean"},
+    },
+    "required": ["design", "headline_claim"],
+}
+
 
 def comprehend(paper, backend) -> dict | None:  # noqa: ANN001
     excerpt = (
@@ -39,7 +56,7 @@ def comprehend(paper, backend) -> dict | None:  # noqa: ANN001
         resp = backend.complete("extractor",
                                 [Message(role="system", content=_SYSTEM + "\n\n" + _CONTRACT),
                                  Message(role="user", content=excerpt)],
-                                response_format="json")
+                                response_format="json", json_schema=_SCHEMA)
         data = resp.json()
     except Exception as exc:  # noqa: BLE001
         log.warning("comprehension failed, falling back to keyword detection: %s", exc)

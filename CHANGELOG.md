@@ -5,6 +5,16 @@ All notable changes to Econoclast are documented here. Format follows
 
 ## [Unreleased]
 
+### Added (self-equipping + schema-validated reads)
+- `econoclast setup` now installs a browser for the agent: it adds the Playwright MCP to Claude Code
+  (`claude mcp add playwright --scope user`) and to `~/.codex/config.toml`, idempotently. The MCP
+  auto-installs its own browser binary on first use. Turn it off with `--no-browser-mcp`. The blocked
+  download work order also tells the agent to install a browser itself if it still has none.
+- Schema-validated structured output: when the backend is Claude Code, the paper-comprehension and
+  intake reads pass `--json-schema`, so the model returns a guaranteed-shape object in
+  `structured_output` instead of JSON parsed out of prose. Codex keeps the prompt contract. A new
+  `json_schema` argument threads through `Backend.complete` and the providers.
+
 ### Added (agent-delegated downloads for blocked sites)
 - Econoclast acts as the boss and the agent does the work. When the plain HTTP download is blocked by
   an anti-crawler defence (a 403, Cloudflare, a JavaScript gate, a cookie wall), Econoclast hands the

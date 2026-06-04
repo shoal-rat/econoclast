@@ -23,6 +23,17 @@ _CONTRACT = (
     'or ""), "claim": str (the specific result they want stress-tested, or "")}'
 )
 
+_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "paper": {"type": "string"},
+        "paper_kind": {"type": "string", "enum": ["url", "path", "title", "none"]},
+        "data": {"type": "string"},
+        "claim": {"type": "string"},
+    },
+    "required": ["paper_kind"],
+}
+
 
 def understand_request(text: str, backend) -> dict:  # noqa: ANN001
     """Read a free-text request and return {paper, paper_kind, data, claim}."""
@@ -30,7 +41,7 @@ def understand_request(text: str, backend) -> dict:  # noqa: ANN001
         resp = backend.complete("extractor",
                                 [Message(role="system", content=_SYSTEM + "\n\n" + _CONTRACT),
                                  Message(role="user", content=text[:4000])],
-                                response_format="json")
+                                response_format="json", json_schema=_SCHEMA)
         data = resp.json()
         if isinstance(data, dict) and data.get("paper_kind"):
             return _clean(data)

@@ -25,7 +25,8 @@ Set up **Econoclast** for this user with as little friction as possible.
    ```bash
    econoclast setup --yes --backend <auto|claude|codex> --mcp [--no-blind] [--no-literature] [--corpus <dir>]
    ```
-   The `--mcp` flag registers Econoclast as a tool inside Claude Code / Codex.
+   The `--mcp` flag registers Econoclast as a tool inside Claude Code / Codex. Setup also installs the
+   Playwright browser MCP so the agent can get past blocked downloads; add `--no-browser-mcp` to skip it.
 
 4. **Confirm** and tell the user the payoff in one line:
    > Setup done. From now on just say: **"review &lt;file path or paper URL&gt;"** and I'll run Econoclast on it.

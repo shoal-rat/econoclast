@@ -40,6 +40,18 @@ def test_parse_claude_error_raises():
         _parse_claude(env, "sonnet", "claude_cli")
 
 
+def test_parse_claude_structured_output_field():
+    # When --json-schema is used, the validated object lands in structured_output;
+    # _parse_claude exposes the envelope so the provider can prefer it.
+    env = json.dumps({
+        "is_error": False, "result": "ignored prose",
+        "structured_output": {"design": "did", "headline_claim": "x"},
+        "usage": {"output_tokens": 3},
+    })
+    resp = _parse_claude(env, "sonnet", "claude_cli")
+    assert resp.raw.get("structured_output") == {"design": "did", "headline_claim": "x"}
+
+
 def test_cli_provider_availability():
     # A bogus binary is not available; a real one (python) is.
     assert ClaudeCodeProvider(binary="definitely-not-real-xyz123").available() is False
@@ -97,3 +109,15 @@ def test_setup_detect_and_build_config():
     cfg = build_config("claude", blind=True, literature=False, corpus=None)
     assert cfg["backend"] == "claude"
     assert cfg["literature"]["enabled"] is False
+
+
+def test_install_codex_browser_mcp_is_idempotent(tmp_path, monkeypatch):
+    from pathlib import Path as _P
+
+    from econoclast.setup_wizard import _install_codex_browser_mcp
+
+    monkeypatch.setattr(_P, "home", lambda: tmp_path)
+    _install_codex_browser_mcp()
+    cfg = (tmp_path / ".codex" / "config.toml").read_text(encoding="utf-8")
+    assert "mcp_servers.playwright" in cfg and "@playwright/mcp" in cfg
+    assert "already" in _install_codex_browser_mcp().lower()  # second call is a no-op

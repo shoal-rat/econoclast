@@ -72,10 +72,11 @@ econoclast setup     # detect Claude Code / Codex, write the config, register th
 econoclast backend   # check which agent it will use
 ```
 
-For the blocked-download fallback, the agent fetches the file with whatever tools it has. Giving your
-Claude Code or Codex a browser (for example the Playwright MCP, or Claude in Chrome) lets it get past
-heavier anti-crawler walls; with no browser it still tries curl and a web search. Turn the whole
-fallback off with `agent_download: false` in `econoclast.yaml`.
+`econoclast setup` also gives the agent a browser: it installs the Playwright MCP into your Claude Code
+or Codex (which auto-installs its own browser binary on first use), so blocked downloads can be driven
+through a real browser. If the agent still finds itself without one, the download work order tells it to
+install one on the spot. Skip this with `--no-browser-mcp`, and turn the whole fallback off with
+`agent_download: false` in `econoclast.yaml`.
 
 ## Commands
 

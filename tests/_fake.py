@@ -37,7 +37,7 @@ class FakeBackend:
         self.fetch_orders: list[str] = []
 
     def complete(self, role, messages, *, response_format=None,  # noqa: ANN001
-                 temperature=None, max_tokens=4096, stop=None) -> LLMResponse:
+                 temperature=None, max_tokens=4096, stop=None, json_schema=None) -> LLMResponse:
         self.calls.append(role)
         r = self.responses.get(role, self._default_for(role))
         text = r(messages) if callable(r) else r

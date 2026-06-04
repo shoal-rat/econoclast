@@ -66,6 +66,7 @@ class ClaudeCodeProvider(LLMProvider):
         response_format: str | None = None,
         stop: list[str] | None = None,
         timeout: float = 180.0,
+        json_schema: dict | None = None,
     ) -> LLMResponse:
         exe = resolve_binary(self.binary)
         if exe is None:
@@ -76,9 +77,16 @@ class ClaudeCodeProvider(LLMProvider):
             cmd += ["--model", model]
         if system:
             cmd += ["--append-system-prompt", system]
+        # Schema-validated output: Claude Code guarantees the shape and returns it
+        # in `structured_output`, which is more robust than parsing JSON from prose.
+        if json_schema:
+            cmd += ["--json-schema", json.dumps(json_schema)]
         cmd += self.extra_args
         out = _run(cmd, user, timeout, "claude")
-        return _parse_claude(out, model, self.name)
+        resp = _parse_claude(out, model, self.name)
+        if json_schema and resp.raw.get("structured_output") is not None:
+            resp.text = json.dumps(resp.raw["structured_output"])
+        return resp
 
     def run_task(self, prompt: str, *, work_dir: str, timeout: float = 300.0,
                  allow: str = "Bash,Read,Edit,Write,WebFetch,WebSearch") -> str:
@@ -150,6 +158,7 @@ class CodexProvider(LLMProvider):
         response_format: str | None = None,
         stop: list[str] | None = None,
         timeout: float = 240.0,
+        json_schema: dict | None = None,  # accepted for interface parity; Codex has no schema mode
     ) -> LLMResponse:
         exe = resolve_binary(self.binary)
         if exe is None:

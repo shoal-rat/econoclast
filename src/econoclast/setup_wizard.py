@@ -1,4 +1,4 @@
-"""`econoclast setup` — detect the environment and wire everything up.
+"""`econoclast setup`: detect the environment and wire everything up.
 
 The goal: a user runs one command (or an agent runs it for them after a couple of
 questions), and afterwards they can just hand Econoclast a path or a URL. This
@@ -47,6 +47,7 @@ def run_setup(
     literature: bool = True,
     corpus: str | None = None,
     install_mcp: bool = False,
+    browser_mcp: bool = True,
     out: str | None = None,
 ) -> dict:
     env = detect_environment()
@@ -60,6 +61,8 @@ def run_setup(
     actions: list[str] = [f"Wrote {config_path}"]
     if install_mcp:
         actions += _install_mcp(env)
+    if browser_mcp and (env["claude"] or env["codex"]):
+        actions += _install_browser_mcp(env)
 
     next_steps = _next_steps(backend, env, install_mcp)
     return {"backend": backend, "env": env, "config_path": str(config_path),
@@ -98,6 +101,49 @@ def _install_codex_mcp() -> str:
         return "Added the MCP server to ~/.codex/config.toml ([mcp_servers.econoclast])."
     except Exception as exc:  # noqa: BLE001
         return f"Codex MCP config skipped: {exc}"
+
+
+def _install_browser_mcp(env: dict) -> list[str]:
+    """Give the agent a browser so it can get past anti-crawler walls on downloads.
+
+    Installs the Playwright MCP (which auto-installs its own browser binary on first
+    use). Idempotent: skips if it is already configured.
+    """
+    actions: list[str] = []
+    if env["claude"]:
+        try:
+            exe = shutil.which("claude")
+            listed = subprocess.run([exe, "mcp", "list"], capture_output=True, text=True, timeout=30)
+            if "playwright" in (listed.stdout or "").lower():
+                actions.append("Browser MCP (Playwright) already set up in Claude Code.")
+            else:
+                proc = subprocess.run(
+                    [exe, "mcp", "add", "playwright", "--scope", "user",
+                     "--", "npx", "-y", "@playwright/mcp@latest"],
+                    capture_output=True, text=True, timeout=60,
+                )
+                actions.append("Added the Playwright browser MCP to Claude Code." if proc.returncode == 0
+                               else f"Browser MCP add skipped: {proc.stderr.strip()[:120]}")
+        except Exception as exc:  # noqa: BLE001
+            actions.append(f"Browser MCP add failed: {exc}")
+    if env["codex"]:
+        actions.append(_install_codex_browser_mcp())
+    return actions
+
+
+def _install_codex_browser_mcp() -> str:
+    cfg = Path.home() / ".codex" / "config.toml"
+    block = ('\n[mcp_servers.playwright]\ncommand = "npx"\n'
+             'args = ["-y", "@playwright/mcp@latest"]\n')
+    try:
+        cfg.parent.mkdir(parents=True, exist_ok=True)
+        existing = cfg.read_text(encoding="utf-8") if cfg.exists() else ""
+        if "mcp_servers.playwright" in existing:
+            return "Browser MCP (Playwright) already set up in Codex."
+        cfg.write_text(existing + block, encoding="utf-8")
+        return "Added the Playwright browser MCP to ~/.codex/config.toml ([mcp_servers.playwright])."
+    except Exception as exc:  # noqa: BLE001
+        return f"Codex browser MCP config skipped: {exc}"
 
 
 def _next_steps(backend: str, env: dict, mcp: bool) -> list[str]:

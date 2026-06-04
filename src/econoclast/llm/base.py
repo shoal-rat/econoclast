@@ -79,6 +79,7 @@ class LLMProvider:
         response_format: str | None = None,  # "json" | None
         stop: list[str] | None = None,
         timeout: float = 120.0,
+        json_schema: dict | None = None,  # JSON Schema for guaranteed-shape output
     ) -> LLMResponse:
         raise NotImplementedError
 

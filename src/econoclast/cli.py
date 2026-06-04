@@ -327,6 +327,8 @@ def setup(
     no_literature: bool = typer.Option(False, "--no-literature", help="Disable online literature retrieval."),
     corpus: Path | None = typer.Option(None, "--corpus", help="Folder of your own papers to ground reviews."),
     install_mcp: bool = typer.Option(True, "--mcp/--no-mcp", help="Register Econoclast with Claude Code / Codex."),
+    browser_mcp: bool = typer.Option(True, "--browser-mcp/--no-browser-mcp",
+                                     help="Give the agent a browser (Playwright MCP) for blocked downloads."),
     yes: bool = typer.Option(False, "--yes", "-y", help="Non-interactive: accept defaults/flags (for agents)."),
     out: Path | None = typer.Option(None, "--out", "-o", help="Where to write econoclast.yaml."),
 ) -> None:
@@ -355,7 +357,7 @@ def setup(
 
     res = run_setup(backend=backend, blind=blind, literature=literature,
                     corpus=str(corpus) if corpus else None, install_mcp=install_mcp,
-                    out=str(out) if out else None)
+                    browser_mcp=browser_mcp, out=str(out) if out else None)
 
     console.print(f"\n[green]Backend:[/green] {res['backend']}")
     for a in res["actions"]:
