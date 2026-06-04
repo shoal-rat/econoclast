@@ -31,9 +31,10 @@ headline result, and re-runs it across hundreds of defensible specifications. Ou
 score and a list of specific, quotable problems.
 
 When a publisher or data host blocks the plain download (a 403, a Cloudflare or JavaScript wall, a
-cookie gate), Econoclast does not give up: it opens a real browser to get past the wall, and if the
-link is dead it searches the web, lets the model pick the most likely source, and downloads from
-there. Enable it with the `browser` extra (below).
+cookie gate), Econoclast does not give up and it does not carry its own browser. It hands the job to
+the agent it runs on: Claude Code or Codex drives its own browser, or uses curl with the right
+cookies, or searches the web for the source, and saves the file. Econoclast directs; the agent does
+the work with its own tools.
 
 ## A native-LLM tool
 
@@ -47,6 +48,13 @@ specification search, cherry-picked samples and windows, weak identification, mi
 checks, hypotheses that look invented after the fact, and claims the evidence does not support. Every
 finding has to quote the paper, a mechanical check confirms the quote is really there, the score
 discounts anything left unquoted, and a separate referee pass turns the pile into one verdict.
+
+Think of Econoclast as the boss and the agent as the worker. Econoclast decides what needs doing and
+hands each job to the agent: read the paper and pull out the design, claim, and data (one reader); run
+the critique as several independent reviewers at once; for a method it does not cover, go research it
+and check the paper against it; on `--deep`, run rival verification strategies and have a judge keep
+the best; and when a download is blocked, get past the wall with a browser. Econoclast sets the task,
+holds every answer to a quote, and merges the results. The agent does the work.
 
 ## Install
 
@@ -62,12 +70,12 @@ Or with pip (you also need Claude Code or Codex installed and logged in):
 pip install "econoclast[all] @ git+https://github.com/shoal-rat/econoclast"
 econoclast setup     # detect Claude Code / Codex, write the config, register the MCP tool
 econoclast backend   # check which agent it will use
-playwright install chromium   # one-time: enables the browser fallback for blocked downloads
 ```
 
-The `[all]` install includes the `browser` extra (Playwright). The `playwright install chromium` step
-downloads the browser it drives, or it reuses your installed Chrome. Skip it and the direct download
-still works; you just lose the anti-crawler fallback.
+For the blocked-download fallback, the agent fetches the file with whatever tools it has. Giving your
+Claude Code or Codex a browser (for example the Playwright MCP, or Claude in Chrome) lets it get past
+heavier anti-crawler walls; with no browser it still tries curl and a web search. Turn the whole
+fallback off with `agent_download: false` in `econoclast.yaml`.
 
 ## Commands
 

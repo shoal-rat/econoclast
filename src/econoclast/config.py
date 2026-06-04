@@ -42,6 +42,8 @@ class Settings:
     contact_email: str | None = None
     cache_dir: str = ".econoclast_cache"
     blind_default: bool = True
+    # When a download is blocked, let the agent fetch it with its own tools (browser, curl, search).
+    agent_download: bool = True
     max_claims: int = 400
     request_timeout: float = 240.0
     raw: dict[str, Any] = field(default_factory=dict)
@@ -78,6 +80,7 @@ class Settings:
             contact_email=contact,
             cache_dir=data.get("cache_dir", ".econoclast_cache"),
             blind_default=bool(data.get("blind_default", True)),
+            agent_download=bool(data.get("agent_download", True)),
             max_claims=int(data.get("max_claims", 400)),
             request_timeout=float(data.get("request_timeout", 240.0)),
             raw=data,

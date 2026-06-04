@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import shutil
 import threading
+from pathlib import Path
 
 from econoclast.config import Settings
 from econoclast.llm.base import LLMError, LLMProvider, LLMResponse, Message, Usage
@@ -22,6 +23,27 @@ from econoclast.logging import get_logger
 log = get_logger("backend")
 
 _ROLE_TEMPERATURE = {"extractor": 0.1, "attacker": 0.3, "referee": 0.2}
+
+
+def _fetch_order(work_dir: str, *, url: str, what: str) -> str:
+    """The work order Econoclast hands the agent to download a blocked file."""
+    target = f"the resource at this URL:\n  {url}\n\n" if url else ""
+    desc = f'The resource is: "{what}".\n' if what else ""
+    return (
+        "You are a download worker for an automated tool. Do exactly this task and nothing else.\n\n"
+        f"TASK: Download {target}and save the actual file into this directory:\n  {work_dir}\n\n"
+        f"{desc}"
+        "The plain HTTP download was blocked, most likely by an anti-crawler defence (a 403, a "
+        "Cloudflare or JavaScript challenge, or a cookie wall). Get past it with whatever tools you "
+        "have: drive a browser if you have one (a Playwright or Chrome MCP, or the Chrome extension), "
+        "or use curl/wget with a real browser User-Agent and the site's cookies.\n\n"
+        "If that exact URL is dead or wrong and you were given a description, search the web for it, "
+        "find the official source (the publisher or author page, or a data repository such as Zenodo, "
+        "Dataverse, OSF, or ICPSR), and download the correct file from there.\n\n"
+        "Save the real file (a PDF, CSV, DTA, XLSX, or ZIP, not an HTML page) into the directory above. "
+        "Do not edit, delete, or touch anything else. When finished, print the saved filename on its "
+        "own line, or print FAILED if you could not get the file."
+    )
 
 
 class Backend:
@@ -73,6 +95,29 @@ class Backend:
             "total_tokens": self.total_usage.total_tokens,
             "est_cost_usd": round(self.total_cost_usd, 4),
         }
+
+    def fetch_into(self, work_dir, *, url: str = "", what: str = "",  # noqa: ANN001
+                   timeout: float = 300.0) -> list[Path]:
+        """Direct the agent to download a blocked file into ``work_dir``.
+
+        This is the boss-to-employee handoff: when the plain download is blocked,
+        Econoclast hands the agent a work order and lets it use its own tools (a
+        browser, curl with cookies, a web search) to get the file. Returns the files
+        that appeared in ``work_dir`` as a result.
+        """
+        work = Path(work_dir)
+        work.mkdir(parents=True, exist_ok=True)
+        before = {p: p.stat().st_mtime for p in work.rglob("*") if p.is_file()}
+        order = _fetch_order(str(work), url=url, what=what)
+        try:
+            self.provider.run_task(order, work_dir=str(work), timeout=timeout)
+        except Exception as exc:  # noqa: BLE001
+            log.warning("agent download task failed: %s", exc)
+        new = [p for p in work.rglob("*")
+               if p.is_file() and (p not in before or p.stat().st_mtime > before[p])]
+        if new:
+            log.info("Agent downloaded %d file(s) into %s", len(new), work)
+        return new
 
 
 def detect_backend(settings: Settings) -> Backend:

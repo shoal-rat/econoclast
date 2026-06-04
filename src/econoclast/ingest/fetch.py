@@ -29,9 +29,8 @@ def resolve_source(path_or_url: str, cache_dir: str | None = None, *, backend=No
     """Return a local file path for ``path_or_url`` (downloading if it's a URL).
 
     Tries a plain HTTP fetch first. If that is blocked (403, Cloudflare, a JS-gated
-    page) it falls back to a real browser, which renders the page and carries the
-    site's cookies. ``backend`` (a model) is used only to rank search hits when the
-    direct link is dead.
+    page), it hands the download to the agent (``backend``): the agent uses its own
+    browser or tools to get past the wall and save the file.
     """
     if not is_url(path_or_url):
         return path_or_url
@@ -44,12 +43,12 @@ def resolve_source(path_or_url: str, cache_dir: str | None = None, *, backend=No
     try:
         return _http_fetch(url, out_dir)
     except httpx.HTTPError as exc:
-        log.warning("Direct fetch failed (%s); trying a browser.", exc)
+        log.warning("Direct fetch failed (%s); asking the agent to fetch it.", exc)
 
-    got = _browser_paper(url, out_dir, backend)
+    got = _agent_paper(url, out_dir, backend)
     if got:
         return got
-    raise RuntimeError(f"Could not fetch {url} (the direct path and the browser fallback both failed).")
+    raise RuntimeError(f"Could not fetch {url} (the direct path and the agent fallback both failed).")
 
 
 def _http_fetch(url: str, out_dir: Path) -> str:
@@ -81,24 +80,18 @@ def _http_fetch(url: str, out_dir: Path) -> str:
         return str(dest)
 
 
-def _browser_paper(url: str, out_dir: Path, backend=None) -> str | None:  # noqa: ANN001
-    """Browser fallback for a paper: get the PDF if there is one, else the rendered text."""
-    from econoclast.ingest.browser import browser_fetch_file, browser_fetch_page
-
-    got = browser_fetch_file(url, prefer_ext=(".pdf",))
-    if got:
-        body, ctype = got
-        if "pdf" in ctype or body[:5].lstrip()[:4] == b"%PDF":
-            dest = out_dir / (_safe_name(url) + ".pdf")
-            dest.write_bytes(body)
-            log.info("Fetched %s via the browser.", url)
-            return str(dest)
-    html = browser_fetch_page(url)
-    if html:
-        dest = out_dir / (_safe_name(url) + ".txt")
-        dest.write_text(_html_to_text(html), encoding="utf-8")
-        log.info("Rendered %s via the browser.", url)
-        return str(dest)
+def _agent_paper(url: str, out_dir: Path, backend=None) -> str | None:  # noqa: ANN001
+    """Delegate a blocked paper download to the agent; return the file it saved."""
+    if backend is None:
+        log.warning("No agent backend available to fetch the blocked URL.")
+        return None
+    new = backend.fetch_into(out_dir, url=url, what=f"the full-text PDF of the paper at {url}")
+    pdfs = [p for p in new if p.suffix.lower() == ".pdf"]
+    if pdfs:
+        return str(pdfs[0])
+    readable = [p for p in new if p.suffix.lower() in (".txt", ".html", ".htm", ".tex", ".md")]
+    if readable:
+        return str(readable[0])
     return None
 
 

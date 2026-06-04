@@ -43,13 +43,11 @@ pdf = ["pymupdf>=1.24"]
 ui = ["streamlit>=1.36"]
 embeddings = ["sentence-transformers>=2.7"]
 mcp = ["mcp>=1.2"]
-# Browser fallback for sites with anti-crawler defences (run `playwright install chromium` after).
-browser = ["playwright>=1.45"]
 replication = ["pandas>=2.0", "statsmodels>=0.14", "matplotlib>=3.7", "numpy>=1.24", "scipy>=1.10"]
 dev = ["pytest>=8.0", "pytest-cov>=5.0", "ruff>=0.5", "mypy>=1.10",
        "pandas>=2.0", "statsmodels>=0.14", "numpy>=1.24", "scipy>=1.10"]
 all = [
-    "pymupdf>=1.24", "streamlit>=1.36", "sentence-transformers>=2.7", "playwright>=1.45",
+    "pymupdf>=1.24", "streamlit>=1.36", "sentence-transformers>=2.7",
     "mcp>=1.2", "pandas>=2.0", "statsmodels>=0.14", "matplotlib>=3.7", "numpy>=1.24", "scipy>=1.10",
 ]
 

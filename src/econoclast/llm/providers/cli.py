@@ -80,6 +80,25 @@ class ClaudeCodeProvider(LLMProvider):
         out = _run(cmd, user, timeout, "claude")
         return _parse_claude(out, model, self.name)
 
+    def run_task(self, prompt: str, *, work_dir: str, timeout: float = 300.0,
+                 allow: str = "Bash,Read,Edit,Write,WebFetch,WebSearch") -> str:
+        """Run an action task with tools enabled, non-interactively, inside work_dir.
+
+        Unlike :meth:`complete` (read-only reasoning), this lets the agent act: run
+        shell commands, fetch the web, drive a browser MCP if one is configured, and
+        write files. The listed tools are pre-approved so nothing prompts.
+        """
+        exe = resolve_binary(self.binary)
+        if exe is None:
+            raise LLMError(f"'{self.binary}' (Claude Code) is not on PATH.")
+        cmd = [exe, "-p", "--output-format", "json", "--allowedTools", allow]
+        cmd += self.extra_args
+        proc = _run_raw(cmd, prompt, timeout, cwd=work_dir)
+        try:
+            return _parse_claude(proc.stdout or "", "", self.name).text
+        except LLMError:
+            return (proc.stdout or "") + (proc.stderr or "")
+
 
 def _parse_claude(stdout: str, model: str, name: str) -> LLMResponse:
     try:
@@ -174,6 +193,25 @@ class CodexProvider(LLMProvider):
         usage = Usage(prompt_tokens=len(prompt.split()), completion_tokens=len(text.split()))
         return LLMResponse(text=text, model=model or "codex", provider=self.name, usage=usage)
 
+    def run_task(self, prompt: str, *, work_dir: str, timeout: float = 300.0) -> str:
+        """Run an action task with tools + network, non-interactively, inside work_dir.
+
+        Uses the workspace-write sandbox with network access turned on, so the agent
+        can download files (and drive a browser MCP if configured) and write them into
+        work_dir, with no approval prompts.
+        """
+        exe = resolve_binary(self.binary)
+        if exe is None:
+            raise LLMError(f"'{self.binary}' (Codex) is not on PATH.")
+        cmd = [exe, "exec", "--skip-git-repo-check",
+               "-s", "workspace-write", "-a", "never",
+               "-c", "sandbox_workspace_write.network_access=true",
+               "--color", "never", "-C", work_dir]
+        cmd += self.extra_args
+        cmd += ["-"]  # read the prompt from stdin
+        proc = _run_raw(cmd, prompt, timeout, cwd=work_dir)
+        return (proc.stdout or "")
+
 
 def _codex_error(stderr: str | None) -> str:
     if not stderr:
@@ -192,7 +230,8 @@ def _run(cmd: list[str], stdin_text: str, timeout: float, label: str) -> str:
     return proc.stdout or ""
 
 
-def _run_raw(cmd: list[str], stdin_text: str, timeout: float) -> subprocess.CompletedProcess:
+def _run_raw(cmd: list[str], stdin_text: str, timeout: float,
+             cwd: str | None = None) -> subprocess.CompletedProcess:
     # On Windows a resolved .cmd/.bat shim must go through the shell launcher.
     use_shell = sys.platform == "win32" and cmd[0].lower().endswith((".cmd", ".bat"))
     try:
@@ -205,6 +244,7 @@ def _run_raw(cmd: list[str], stdin_text: str, timeout: float) -> subprocess.Comp
             errors="replace",
             timeout=timeout,
             shell=use_shell,
+            cwd=cwd,
         )
     except FileNotFoundError as exc:
         raise LLMError(f"CLI not found: {cmd[0]}") from exc

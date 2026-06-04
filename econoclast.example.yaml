@@ -26,6 +26,7 @@ literature:
 # Misc
 # ---------------------------------------------------------------------------
 blind_default: true           # blind author identity during review (anti prestige-bias)
+agent_download: true          # if a download is blocked, let the agent fetch it with its own tools
 request_timeout: 240          # seconds per backend call
 cache_dir: .econoclast_cache
 contact_email: ""             # optional: a polite-pool e-mail raises OpenAlex/Crossref limits

@@ -206,7 +206,8 @@ class Econoclast:
         from econoclast.ingest.fetch import resolve_source
         from econoclast.ingest.paper import load_paper
 
-        paper_file = resolve_source(str(source), cache_dir=self.settings.cache_dir, backend=self.backend)
+        fetch_agent = self.backend if self.settings.agent_download else None
+        paper_file = resolve_source(str(source), cache_dir=self.settings.cache_dir, backend=fetch_agent)
         paper = load_paper(paper_file)
 
         # Read the paper once with the model; reuse it for data discovery and the review.
@@ -266,11 +267,12 @@ class Econoclast:
                  if isinstance(u, str) and u.lower().startswith("http")]
         links += find_dataset_links(paper)
         work = self.settings.cache_path() / "data"
+        fetch_agent = self.backend if self.settings.agent_download else None
         for link in links[:5]:
             if progress:
                 progress(f"fetching dataset: {link.kind} {link.ref[:40]}")
             try:
-                files = acquire_dataset(link, work, query=query, backend=self.backend)
+                files = acquire_dataset(link, work, query=query, backend=fetch_agent)
             except Exception as exc:  # noqa: BLE001
                 log.warning("acquire failed for %s: %s", link.url, exc)
                 continue
@@ -279,13 +281,13 @@ class Econoclast:
                 log.info("Using dataset %s (from %s)", main.name, link.url)
                 return str(main), link.url
 
-        # No usable link worked: let the browser search the web for the dataset.
-        if query:
+        # No usable link worked: let the agent search the web for the dataset.
+        if query and fetch_agent is not None:
             if progress:
-                progress("searching the web for the dataset")
+                progress("asking the agent to find the dataset")
             try:
                 files = acquire_dataset(DataLink(kind="direct", ref="", url="", supported=True),
-                                        work, query=query, backend=self.backend)
+                                        work, query=query, backend=fetch_agent)
                 main = pick_main_table(find_tabular_files(files), paper)
                 if main is not None:
                     log.info("Using dataset %s (from a web search)", main.name)

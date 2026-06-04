@@ -40,10 +40,11 @@ Call `econoclast_verify(paper, data)` (data only if the user gave it). One call 
 A referee pass writes the synthesis; unquoted findings are discounted.
 
 The call runs for a couple of minutes and returns once. You already told the user what it is doing, so
-do not go silent wondering; wait for it. If the data turns out not to be public, this is not a failure:
-Econoclast still returns the full text-based verdict (the critique and the methodology audit) and says
-plainly that it could not re-run the data. Pass that on, and offer to add the re-run if they can share
-the file.
+do not go silent wondering; wait for it. If a publisher or data host blocks a download, Econoclast will
+hand you the job, as a `claude -p` task, to fetch the file with your own tools (your browser, curl, or a
+web search); let it run. If the data turns out not to be public, this is not a failure: Econoclast still
+returns the full text-based verdict (the critique and the methodology audit) and says plainly that it
+could not re-run the data. Pass that on, and offer to add the re-run if they can share the file.
 
 If `econoclast_verify` is not available, run `econoclast verify "<paper>"` in the shell (install with
 `pip install "econoclast[all] @ git+https://github.com/shoal-rat/econoclast"` if missing). For the

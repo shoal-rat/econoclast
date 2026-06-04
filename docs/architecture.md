@@ -13,7 +13,7 @@ something weaker.
 ```
 econoclast/
 ├── ingest/        PDF (PyMuPDF/pypdf) + LaTeX parsing, section segmentation, claim harvesting,
-│                  fetching (httpx, with a Playwright browser fallback for blocked sites)
+│                  fetching (httpx, with an agent-delegated fallback for blocked sites)
 ├── literature/    keyless search (OpenAlex, S2, arXiv, Crossref) + local corpus + keyword ranking
 ├── llm/           the backend: drive the claude or codex CLI as a subprocess (backend.py)
 ├── attacks/       the unified Attack/Finding model: LLM critiques + methodology audit + design gating
@@ -59,9 +59,11 @@ econoclast/
   an otherwise calm verdict.
 - **Graceful degradation.** A literature source down -> it returns `[]` and the run continues. There is
   no offline mode: if neither `claude` nor `codex` is on PATH, the run stops with a clear message.
-- **Downloads escalate.** Paper and dataset fetches try plain httpx first; if a site blocks it
-  (403 / Cloudflare / JS gate), `ingest/browser.py` opens a real browser to get past the wall, and if
-  the link is dead it searches the web and lets the model pick the source. The browser is the optional
-  `browser` extra; without it the direct path stands.
+- **Econoclast directs, the agent works.** Paper and dataset fetches try plain httpx first; if a site
+  blocks it (403 / Cloudflare / JS gate), Econoclast hands the agent a work order and the agent does the
+  download with its own tools. `Backend.fetch_into` runs `claude -p` (with a tool allowlist) or
+  `codex exec` (workspace-write with network) so the agent can drive a browser, curl with cookies, or
+  search the web, then saves the file into the cache. Off via `agent_download: false`. This is the
+  general pattern: Econoclast decides what needs doing and delegates the doing to the agent it runs on.
 - **No CLI in tests.** Tests inject a fake backend (`tests/_fake.py`), so the suite never spawns
   `claude` or `codex` and stays deterministic.

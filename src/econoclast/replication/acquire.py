@@ -27,10 +27,10 @@ def acquire_dataset(link: DataLink, dest_dir: str | Path, *, query: str | None =
                     backend=None) -> list[Path]:  # noqa: ANN001
     """Download a dataset link and return its tabular files.
 
-    Tries the plain HTTP path first. If that is blocked or the link is dead, it
-    falls back to a real browser, and then to a browser web search (with the model
-    ranking the hits) so an anti-crawler wall does not end the run. ``query`` is the
-    paper's title/availability text used for that search.
+    Tries the plain HTTP path first. If that is blocked or the link is dead, it hands
+    the download to the agent (``backend``), which uses its own browser or tools to
+    get past the wall, and to search the web for the dataset when the link is gone.
+    ``query`` is the paper's title/availability text used for that search.
     """
     dest = Path(dest_dir)
     dest.mkdir(parents=True, exist_ok=True)
@@ -43,11 +43,10 @@ def acquire_dataset(link: DataLink, dest_dir: str | Path, *, query: str | None =
         except Exception as exc:  # noqa: BLE001
             log.warning("Dataset download failed for %s: %s", link.url, exc)
     else:
-        log.warning("%s deposits need a login; trying the browser/search fallback (%s).",
-                    link.kind, link.ref)
+        log.warning("%s deposits need a login; handing it to the agent (%s).", link.kind, link.ref)
     if files:
         return files
-    return _browser_dataset(link.url, dest, query=query, backend=backend)
+    return _agent_dataset(link.url, dest, query=query, backend=backend)
 
 
 def _dispatch(client, link: DataLink, dest: Path) -> list[Path]:  # noqa: ANN001
@@ -62,44 +61,23 @@ def _dispatch(client, link: DataLink, dest: Path) -> list[Path]:  # noqa: ANN001
     return []
 
 
-def _browser_dataset(url: str, dest: Path, *, query: str | None, backend) -> list[Path]:  # noqa: ANN001
-    """Browser fallback: render the link past any anti-crawler wall, then search if it's dead."""
-    from econoclast.ingest.browser import (
-        browser_available,
-        browser_fetch_file,
-        browser_search,
-        rank_candidates,
-    )
-
-    if not browser_available():
+def _agent_dataset(url: str, dest: Path, *, query: str | None, backend) -> list[Path]:  # noqa: ANN001
+    """Hand a blocked/dead dataset link to the agent; ingest whatever it saves."""
+    if backend is None:
         return []
-    want = _TABULAR + (".zip",)
-    if url:
-        files = _ingest_bytes(browser_fetch_file(url, prefer_ext=want), dest, url)
-        if files:
-            log.info("Acquired dataset via the browser from %s", url)
-            return files
-    if query:
-        candidates = browser_search(f"{query} dataset replication files")
-        for cand in rank_candidates(query, candidates, backend)[:5]:
-            files = _ingest_bytes(browser_fetch_file(cand, prefer_ext=want), dest, cand)
-            if files:
-                log.info("Acquired dataset via a browser search from %s", cand)
-                return files
-    return []
-
-
-def _ingest_bytes(got, dest: Path, url: str) -> list[Path]:  # noqa: ANN001
-    """Save (bytes, content_type) from the browser and return any tabular files."""
-    if not got:
-        return []
-    body, ctype = got
-    if len(body) > _MAX_BYTES:
-        return []
-    name = _name_from_url(url, ctype)
-    if "." not in name and (body[:2] == b"PK" or "zip" in ctype):
-        name += ".zip"
-    return _save_and_maybe_unzip(body, dest, name)
+    what = (f"the replication dataset for the paper: {query}" if query
+            else "the replication dataset for this paper")
+    new = backend.fetch_into(dest, url=url, what=what)
+    tables: list[Path] = []
+    for p in new:
+        if p.suffix.lower() in _TABULAR:
+            tables.append(p)
+        elif p.suffix.lower() == ".zip" or (p.exists() and p.read_bytes()[:2] == b"PK"):
+            try:
+                tables += _save_and_maybe_unzip(p.read_bytes(), dest, p.name)
+            except Exception as exc:  # noqa: BLE001
+                log.warning("could not unzip %s: %s", p, exc)
+    return tables
 
 
 def _zenodo(client, rid: str, dest: Path) -> list[Path]:
