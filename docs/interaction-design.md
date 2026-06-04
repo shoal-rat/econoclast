@@ -121,39 +121,12 @@ changes, each tied to the friction above.
 
 ### The flow now
 
-```mermaid
-sequenceDiagram
-    actor Econ as Economist
-    participant Agent as AI agent
-    participant Eco as Econoclast
-    participant Web
+<p align="center">
+  <img src="assets/interaction.svg" alt="One request in: the agent states its plan, runs the whole check, and explains the verdict in plain language" width="980">
+</p>
 
-    Econ->>Agent: "Check this paper for me." (a link, a file, or a title)
-    Agent->>Eco: understand the request
-    alt paper not given
-        Eco-->>Agent: ask one thing
-        Agent->>Econ: "Which paper? A link, a file, or the title."
-        Econ-->>Agent: the paper
-    end
-    Note over Agent,Eco: the claim and the data default on their own, nothing else to ask
-    Agent->>Econ: "I'll check the math, hunt for fragile choices, and re-run the data. About 2 minutes."
-    Agent->>+Eco: verify(paper)
-    Eco->>Web: fetch the paper, look for the public data
-    alt data is public
-        Eco->>Eco: forensics, critique, method research, re-run the data
-    else no public data
-        Eco->>Eco: forensics, critique, method research (text only)
-        Note right of Eco: says so plainly, keeps every result
-    end
-    Eco-->>-Agent: fragility verdict + findings, each with a quote
-    Agent->>Econ: one-sentence verdict first, then the serious findings in plain words
-    loop refine, no restart
-        Econ->>Agent: "show me the full report" / "use my data" / "check Table 4"
-        Agent->>Econ: answer from the report, or re-run only that part
-    end
-```
-
-The diagram is deliberately the happy path plus the three branches that matter to the user: the one
-question asked only when the paper is missing, the data-found versus no-data split, and the refine loop.
+The diagram is deliberately the happy path plus the branches that matter to the user: the data-found
+versus no-data split (graceful degradation), and the refine loop. The one question, asked only when the
+paper is missing, stays out of the common case.
 Everything else (backend selection, design gating, grounding, the forensic battery) is detail the
 non-technical user should never have to see, and it stays in the engine.

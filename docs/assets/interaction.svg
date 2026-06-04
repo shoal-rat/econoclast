@@ -1,0 +1,109 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 626" width="1200" height="626" font-family="Segoe UI, Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="aDark" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#475569"/>
+    </marker>
+    <marker id="aLite" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#94a3b8"/>
+    </marker>
+    <style>
+      .card  { fill:#ffffff; stroke:#cbd5e1; stroke-width:1.5; }
+      .name  { font-size:15px; font-weight:700; fill:#0f172a; text-anchor:middle; }
+      .role  { font-size:11px; fill:#64748b; text-anchor:middle; }
+      .life  { stroke:#cbd5e1; stroke-width:1.5; stroke-dasharray:3 5; }
+      .msg   { stroke:#475569; stroke-width:2; fill:none; }
+      .ret   { stroke:#94a3b8; stroke-width:2; stroke-dasharray:6 4; fill:none; }
+      .lbl   { font-size:13.5px; fill:#334155; text-anchor:middle; }
+      .lbls  { font-size:13.5px; fill:#334155; }
+      .sub   { font-size:11px; fill:#94a3b8; text-anchor:middle; }
+      .act   { fill:#ede9fe; stroke:#c4b5fd; stroke-width:1; }
+      .note  { fill:#fffbeb; stroke:#fcd34d; stroke-width:1; }
+      .notet { font-size:12px; fill:#92400e; text-anchor:middle; }
+      .frag  { fill:none; stroke:#cbd5e1; stroke-width:1.2; stroke-dasharray:2 4; }
+      .tab   { fill:#e2e8f0; }
+      .tabt  { font-size:11px; font-weight:700; fill:#475569; }
+    </style>
+  </defs>
+
+  <rect width="1200" height="626" fill="#f8fafc" rx="14"/>
+
+  <!-- lifelines -->
+  <line class="life" x1="150" y1="84" x2="150" y2="548"/>
+  <line class="life" x1="470" y1="84" x2="470" y2="548"/>
+  <line class="life" x1="800" y1="84" x2="800" y2="524"/>
+  <line class="life" x1="1060" y1="84" x2="1060" y2="524"/>
+
+  <!-- activation bars -->
+  <rect class="act" x="794" y="236" width="12" height="238" rx="3"/>
+  <rect class="act" x="1054" y="288" width="12" height="40" rx="3"/>
+
+  <!-- actor headers -->
+  <rect class="card" x="55"  y="26" width="190" height="52" rx="10"/>
+  <rect x="55"  y="26" width="190" height="6" rx="3" fill="#0f172a"/>
+  <text class="name" x="150" y="54">Economist</text>
+  <text class="role" x="150" y="70">you</text>
+
+  <rect class="card" x="375" y="26" width="190" height="52" rx="10"/>
+  <rect x="375" y="26" width="190" height="6" rx="3" fill="#0ea5e9"/>
+  <text class="name" x="470" y="54">AI agent</text>
+  <text class="role" x="470" y="70">Claude Code or Codex</text>
+
+  <rect class="card" x="705" y="26" width="190" height="52" rx="10"/>
+  <rect x="705" y="26" width="190" height="6" rx="3" fill="#8b5cf6"/>
+  <text class="name" x="800" y="54">Econoclast</text>
+  <text class="role" x="800" y="70">the engine</text>
+
+  <rect class="card" x="965" y="26" width="190" height="52" rx="10"/>
+  <rect x="965" y="26" width="190" height="6" rx="3" fill="#f59e0b"/>
+  <text class="name" x="1060" y="54">Web</text>
+  <text class="role" x="1060" y="70">paper and data</text>
+
+  <!-- M1: ask once -->
+  <text class="lbl" x="310" y="110">Check this paper for me</text>
+  <line class="msg" x1="150" y1="120" x2="468" y2="120" marker-end="url(#aDark)"/>
+  <text class="sub" x="310" y="135">a link, a file, or the title</text>
+
+  <!-- M2: feedforward back to the user -->
+  <text class="lbl" x="312" y="162">I'll check the math, find fragile choices, and re-run the data. About 2 minutes.</text>
+  <line class="msg" x1="470" y1="172" x2="152" y2="172" marker-end="url(#aDark)"/>
+
+  <!-- Note A: defaults -->
+  <rect class="note" x="392" y="188" width="486" height="30" rx="7"/>
+  <text class="notet" x="635" y="207">Only the paper is required. The claim and the data default on their own.</text>
+
+  <!-- M3: verify -->
+  <text class="lbl" x="635" y="242">verify(paper)</text>
+  <line class="msg" x1="470" y1="252" x2="792" y2="252" marker-end="url(#aDark)"/>
+
+  <!-- M4: fetch -->
+  <text class="lbl" x="930" y="280">fetch the paper, find the public data</text>
+  <line class="msg" x1="806" y1="290" x2="1052" y2="290" marker-end="url(#aDark)"/>
+
+  <!-- M5: return data -->
+  <text class="lbl" x="930" y="318">the paper and its dataset</text>
+  <line class="ret" x1="1054" y1="328" x2="808" y2="328" marker-end="url(#aLite)"/>
+
+  <!-- self action: the work -->
+  <path class="msg" d="M806,362 L852,362 L852,386 L810,386" marker-end="url(#aDark)"/>
+  <text class="lbls" x="862" y="380">forensics, critique, method research, re-run the data</text>
+
+  <!-- Note B: graceful degradation -->
+  <rect class="note" x="706" y="402" width="452" height="30" rx="7"/>
+  <text class="notet" x="932" y="421">If the data is not public, it still runs the text checks and says so plainly.</text>
+
+  <!-- M6: verdict back -->
+  <text class="lbl" x="635" y="462">fragility verdict + findings, each with a quote</text>
+  <line class="ret" x1="794" y1="472" x2="472" y2="472" marker-end="url(#aLite)"/>
+
+  <!-- M7: plain language out -->
+  <text class="lbl" x="310" y="500">a one-sentence verdict, then the findings that matter</text>
+  <line class="msg" x1="470" y1="510" x2="152" y2="510" marker-end="url(#aDark)"/>
+
+  <!-- loop: refine without restart -->
+  <rect class="frag" x="70" y="548" width="500" height="58" rx="8"/>
+  <rect class="tab" x="70" y="548" width="158" height="20" rx="6"/>
+  <text class="tabt" x="80" y="562">loop  refine, no restart</text>
+  <text class="lbl" x="310" y="586">show the full report, use my data, check Table 4</text>
+  <line class="msg" x1="170" y1="595" x2="450" y2="595" marker-end="url(#aDark)"/>
+  <line class="msg" x1="450" y1="595" x2="170" y2="595" marker-end="url(#aDark)"/>
+</svg>

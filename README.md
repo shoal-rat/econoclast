@@ -100,37 +100,9 @@ econoclast forensics examples/demo_paper.txt
 You ask once and it finishes. The agent works out what it has, states what it is about to do, and only
 asks you a question if it cannot find the paper. The data and the exact result default on their own.
 
-```mermaid
-sequenceDiagram
-    actor Econ as Economist
-    participant Agent as AI agent
-    participant Eco as Econoclast
-    participant Web
-
-    Econ->>Agent: "Check this paper for me." (a link, a file, or a title)
-    Agent->>Eco: understand the request
-    alt paper not given
-        Eco-->>Agent: ask one thing
-        Agent->>Econ: "Which paper? A link, a file, or the title."
-        Econ-->>Agent: the paper
-    end
-    Note over Agent,Eco: the claim and the data default on their own, nothing else to ask
-    Agent->>Econ: "I'll check the math, hunt for fragile choices, and re-run the data. About 2 minutes."
-    Agent->>+Eco: verify(paper)
-    Eco->>Web: fetch the paper, look for the public data
-    alt data is public
-        Eco->>Eco: forensics, critique, method research, re-run the data
-    else no public data
-        Eco->>Eco: forensics, critique, method research (text only)
-        Note right of Eco: says so plainly, keeps every result
-    end
-    Eco-->>-Agent: fragility verdict + findings, each with a quote
-    Agent->>Econ: one-sentence verdict first, then the serious findings in plain words
-    loop refine, no restart
-        Econ->>Agent: "show me the full report" / "use my data" / "check Table 4"
-        Agent->>Econ: answer from the report, or re-run only that part
-    end
-```
+<p align="center">
+  <img src="docs/assets/interaction.svg" alt="One request in: the agent states its plan, runs the whole check, and explains the verdict in plain language" width="980">
+</p>
 
 How that flow was designed, and the friction it removed, is written up in
 [docs/interaction-design.md](docs/interaction-design.md).
