@@ -28,7 +28,9 @@ _CONTRACT = (
     '"fixed_effects": [[cols], ...], "cluster": [cols], "sample_filters": [pandas-query strings], '
     '"estimator": "ols|iv|logit", "preferred_sign": 1 or -1, '
     '"running_var": col_or_empty, "cutoff": number_or_null, '
-    '"unit": col_or_empty, "time": col_or_empty, "treated": col_or_empty, "treat_time": number_or_null}. '
+    '"unit": col_or_empty, "time": col_or_empty, "treated": col_or_empty, "treat_time": number_or_null, '
+    '"cohort": col_or_empty}. '
+    "cohort is the per-unit first-treated period column for STAGGERED DiD (0 = never treated). "
     "Omit RDD/DiD fields (leave empty/null) unless the paper clearly uses that design."
 )
 
@@ -134,6 +136,7 @@ def _validate(data, cols: list[str], data_path: str) -> SpecConfig | None:
         time=_col(data.get("time")),
         treated=_col(data.get("treated")),
         treat_time=_num(data.get("treat_time")),
+        cohort=_col(data.get("cohort")),
     )
 
 

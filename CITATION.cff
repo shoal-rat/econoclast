@@ -1,0 +1,17 @@
+cff-version: 1.2.0
+title: "Econoclast: an adversarial AI referee for empirical economics"
+message: "If you use this software, please cite it."
+type: software
+authors:
+  - alias: shoal-rat
+repository-code: "https://github.com/shoal-rat/econoclast"
+url: "https://github.com/shoal-rat/econoclast"
+license: MIT
+version: "0.1.0"
+keywords:
+  - economics
+  - econometrics
+  - p-hacking
+  - research-integrity
+  - replication
+  - specification-curve

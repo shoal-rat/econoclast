@@ -39,6 +39,7 @@ class SpecConfig:
     time: str = ""  # DiD: time column
     treated: str = ""  # DiD: 0/1 treated-unit indicator
     treat_time: float | None = None  # DiD: treatment onset time
+    cohort: str = ""  # DiD (staggered): per-unit first-treated period column (0 = never)
 
     @classmethod
     def from_yaml(cls, path: str | Path) -> SpecConfig:
@@ -64,6 +65,7 @@ class SpecConfig:
             time=d.get("time", ""),
             treated=d.get("treated", ""),
             treat_time=d.get("treat_time"),
+            cohort=d.get("cohort", ""),
         )
 
     def to_yaml(self) -> str:
@@ -87,6 +89,7 @@ class SpecConfig:
             "time": self.time,
             "treated": self.treated,
             "treat_time": self.treat_time,
+            "cohort": self.cohort,
         }, sort_keys=False)
 
 

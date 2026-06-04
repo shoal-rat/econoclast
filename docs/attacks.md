@@ -77,6 +77,21 @@ paper is clean on that dimension.
 
 ---
 
+## Network checks
+
+### citation-check
+Splits the bibliography into entries and asks Crossref's reference matcher whether each one
+corresponds to a real work. A high share of unmatched references is worth checking against fabricated
+or garbled citations. Books, working papers, and datasets without a DOI are reported as unresolved
+rather than fabricated, so the confidence is moderate. Runs only when literature retrieval is on.
+
+## Ensemble voting
+
+With `--ensemble N`, every LLM attack runs N times (varying the sampling temperature, and using
+different models when the route has them). Near-duplicate findings are clustered by category and title
+overlap, and only those that recur in a majority of runs survive. Singletons are dropped as likely
+noise. The surviving confidence is scaled by how many runs supported the finding.
+
 ## Roadmap (replication-based)
 
 McCrary / Cattaneo-Jansson-Ma RDD density tests; Goodman-Bacon / Callaway-Sant'Anna / Sun-Abraham

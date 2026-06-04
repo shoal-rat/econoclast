@@ -67,7 +67,7 @@ clast = "econoclast.cli:app"
 where = ["src"]
 
 [tool.setuptools.package-data]
-econoclast = ["report/templates/*.html", "report/templates/*.md", "data/*.yaml"]
+econoclast = ["py.typed", "report/templates/*.html", "report/templates/*.md", "data/*.yaml"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

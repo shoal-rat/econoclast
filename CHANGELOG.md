@@ -5,6 +5,21 @@ All notable changes to Econoclast are documented here. Format follows
 
 ## [Unreleased]
 
+### Added (roadmap completion)
+- **McCrary (2008) density test** for RDD manipulation (log-density jump + standard error + bandwidth
+  scan), replacing the binomial screening test. Validated against synthetic clean/manipulated data.
+- **Staggered-DiD estimators**: Callaway and Sant'Anna (2021) group-time ATT with a clustered
+  bootstrap, Sun and Abraham (2021) interaction-weighted event study, and a Goodman-Bacon style
+  TWFE-vs-CS contrast that flags negative-weight bias. Validated against synthetic data with a known
+  dynamic effect.
+- **Citation verification** (`citation-check`): the bibliography is matched against Crossref to flag
+  unresolved or fabricated references.
+- **Ensemble voting** (`--ensemble N`): run each LLM attack N times and keep only findings that recur.
+- **GROBID ingestion** for hard PDF layouts (set `ECONOCLAST_GROBID_URL`); falls back to PyMuPDF/pypdf.
+- **`econoclast reproduce`**: run an author's replication package (opt-in, untrusted).
+- **`econoclast batch`**: review a whole folder and rank papers by fragility.
+- Project files: CITATION.cff, SECURITY.md, CODE_OF_CONDUCT.md, a pull-request template, and `py.typed`.
+
 ### Added
 - **Autonomous `econoclast verify <path or URL>`**: one line in, full verdict out. Fetches the paper,
   runs forensics + critique, finds the dataset named in the paper (Zenodo, Dataverse, OSF, GitHub, or a

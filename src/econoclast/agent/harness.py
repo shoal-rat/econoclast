@@ -54,6 +54,7 @@ class Econoclast:
         use_llm: bool = True,
         use_literature: bool = True,
         blind: bool = True,
+        ensemble: int = 1,
         replication_config: str | None = None,
         max_workers: int = 6,
         progress=None,
@@ -69,6 +70,7 @@ class Econoclast:
             designs=designs,
             searcher=self.searcher if use_literature else None,
             blind=blind,
+            ensemble=max(1, ensemble),
         )
         paper_norm = normalize_for_match(paper.text)
 
@@ -81,16 +83,18 @@ class Econoclast:
         run_names: list[str] = []
         skipped: list[str] = []
         forensic_attacks: list[Attack] = []
-        llm_attacks: list[Attack] = []
+        concurrent_attacks: list[Attack] = []
         for a in attacks:
             if not a.gate(ctx):
-                skipped.append(f"{a.name} (design n/a)")
+                skipped.append(f"{a.name} (n/a)")
                 continue
             if a.requires_llm and not include_llm:
                 skipped.append(f"{a.name} (no LLM)")
                 continue
             run_names.append(a.name)
-            (llm_attacks if a.kind == "llm" else forensic_attacks).append(a)
+            # Deterministic forensics run sequentially; LLM and network attacks
+            # (e.g. citation-check) run together in the thread pool.
+            (forensic_attacks if a.kind == "deterministic" else concurrent_attacks).append(a)
 
         findings: list[Finding] = []
 
@@ -100,10 +104,10 @@ class Econoclast:
                 progress(f"forensic: {a.name}")
             findings.extend(self._safe_run(a, ctx))
 
-        # LLM attacks concurrently.
-        if llm_attacks:
+        # LLM + network attacks concurrently.
+        if concurrent_attacks:
             with cf.ThreadPoolExecutor(max_workers=max_workers) as pool:
-                futs = {pool.submit(self._safe_run, a, ctx): a for a in llm_attacks}
+                futs = {pool.submit(self._safe_run, a, ctx): a for a in concurrent_attacks}
                 for fut in cf.as_completed(futs):
                     a = futs[fut]
                     if progress:

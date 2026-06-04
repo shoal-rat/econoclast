@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 from econoclast.attacks.base import Attack
+from econoclast.attacks.citations import CitationVerificationAttack
 from econoclast.attacks.forensic import build_forensic_attacks
 from econoclast.attacks.llm import build_llm_attacks
 
 
 def all_attacks() -> list[Attack]:
-    return build_forensic_attacks() + build_llm_attacks()
+    return build_forensic_attacks() + [CitationVerificationAttack()] + build_llm_attacks()
 
 
 def attacks_by_name() -> dict[str, Attack]:
@@ -29,5 +30,5 @@ def select_attacks(
             continue
         if a.kind == "llm" and not include_llm:
             continue
-        chosen.append(a)
+        chosen.append(a)  # "network" attacks (e.g. citation-check) are always eligible
     return chosen

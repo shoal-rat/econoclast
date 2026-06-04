@@ -90,6 +90,7 @@ class AttackContext:
     forensic_results: list[ForensicResult] = field(default_factory=list)
     run_dir: Path | None = None
     blind: bool = True  # blind author identity to LLM attacks (anti prestige-bias)
+    ensemble: int = 1  # run each LLM attack N times and keep findings that recur
     notes: dict[str, Any] = field(default_factory=dict)
 
     @property

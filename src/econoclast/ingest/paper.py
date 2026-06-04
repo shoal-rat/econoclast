@@ -43,9 +43,11 @@ def load_paper(path: str | Path) -> Paper:
             text=data["text"],
             path=str(p),
             source_format="pdf",
+            abstract=data.get("abstract", ""),
             sections=sections,
             tables=data["tables"],
-            meta={"n_pages": data.get("n_pages")},
+            references=data.get("references", []),
+            meta={"n_pages": data.get("n_pages"), "backend": data.get("backend")},
         )
     elif suffix in (".tex", ".latex"):
         data = extract_latex(str(p))

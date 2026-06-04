@@ -127,19 +127,33 @@ class LLMAttack(Attack):
 
     def run(self, ctx: AttackContext) -> list[Finding]:
         if not ctx.llm_live:
-            log.info("Skipping LLM attack '%s' — no live model configured.", self.name)
+            log.info("Skipping LLM attack '%s' (no live model configured).", self.name)
             return []
         messages = [
             Message(role="system", content=self.system_prompt + "\n\n" + _UNTRUSTED + "\n\n" + _JSON_CONTRACT),
             Message(role="user", content=self.build_user_prompt(ctx)),
         ]
-        try:
-            resp = ctx.router.complete("attacker", messages, response_format="json")
-        except Exception as exc:  # noqa: BLE001
-            log.warning("attack '%s' LLM call failed: %s", self.name, exc)
+        n = max(1, ctx.ensemble)
+        runs: list[list[Finding]] = []
+        for i in range(n):
+            try:
+                # Vary temperature across runs for sampling diversity.
+                temp = 0.2 + 0.25 * i if n > 1 else None
+                resp = ctx.router.complete("attacker", messages, response_format="json", temperature=temp)
+            except Exception as exc:  # noqa: BLE001
+                log.warning("attack '%s' LLM call failed: %s", self.name, exc)
+                continue
+            runs.append(_parse_findings(resp.json(), self.name, self.category))
+        if not runs:
             return []
-        findings = _parse_findings(resp.json(), self.name, self.category)
-        log.info("attack '%s' produced %d finding(s)", self.name, len(findings))
+        if n > 1:
+            from econoclast.attacks.ensemble import vote_findings
+
+            findings = vote_findings(runs)
+            log.info("attack '%s': %d findings survived %d-way voting", self.name, len(findings), n)
+        else:
+            findings = runs[0]
+            log.info("attack '%s' produced %d finding(s)", self.name, len(findings))
         return findings
 
 

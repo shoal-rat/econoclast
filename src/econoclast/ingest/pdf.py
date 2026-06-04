@@ -15,6 +15,15 @@ log = get_logger("ingest.pdf")
 
 
 def extract_pdf(path: str) -> dict:
+    from econoclast.ingest.grobid import extract_grobid, grobid_url
+
+    base = grobid_url()
+    if base:
+        try:
+            log.info("Using GROBID at %s", base)
+            return extract_grobid(path, base)
+        except Exception as exc:  # noqa: BLE001
+            log.warning("GROBID failed (%s); falling back to local extraction.", exc)
     try:
         return _extract_pymupdf(path)
     except ImportError:

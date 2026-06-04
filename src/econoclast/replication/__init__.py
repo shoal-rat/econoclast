@@ -15,7 +15,8 @@ from econoclast.logging import get_logger
 from econoclast.replication.did import event_study
 from econoclast.replication.models import SpecConfig, SpecCurve, SpecResult
 from econoclast.replication.multiverse import run_multiverse
-from econoclast.replication.rdd import manipulation_test, rdd_estimate
+from econoclast.replication.rdd import mccrary_density_test, rdd_estimate
+from econoclast.replication.staggered import bacon_diagnostic, sun_abraham
 
 log = get_logger("replication")
 
@@ -38,16 +39,35 @@ def run_replication(config: SpecConfig) -> dict[str, Any]:
 
     if config.running_var and config.cutoff is not None:
         df = _load(config.data)
-        out["rdd_manipulation"] = manipulation_test(df[config.running_var], float(config.cutoff))
+        out["rdd_manipulation"] = mccrary_density_test(df[config.running_var], float(config.cutoff))
         out["rdd_sensitivity"] = rdd_estimate(df, config.outcome, config.running_var, float(config.cutoff))
 
-    if config.unit and config.time and config.treated and config.treat_time is not None:
+    # Staggered DiD: prefer a cohort column; otherwise synthesise one from a
+    # single treatment time + a treated indicator.
+    cohort_col = _resolve_cohort(config)
+    if cohort_col is not None and config.unit and config.time:
+        df = _load(config.data)
+        if cohort_col == "_cohort" and "_cohort" not in df.columns:
+            df["_cohort"] = (df[config.treated] > 0).astype(float) * float(config.treat_time)
+        out["did_callaway_santanna"] = bacon_diagnostic(
+            df, unit=config.unit, time=config.time, outcome=config.outcome, cohort=cohort_col)
+        out["did_sun_abraham"] = sun_abraham(
+            df, unit=config.unit, time=config.time, outcome=config.outcome, cohort=cohort_col)
+    elif config.unit and config.time and config.treated and config.treat_time is not None:
         df = _load(config.data)
         out["did_event_study"] = event_study(
             df, unit=config.unit, time=config.time, outcome=config.outcome,
             treated=config.treated, treat_time=config.treat_time)
 
     return out
+
+
+def _resolve_cohort(config: SpecConfig) -> str | None:
+    if config.cohort:
+        return config.cohort
+    if config.unit and config.time and config.treated and config.treat_time is not None:
+        return "_cohort"
+    return None
 
 
 def replication_findings(result: dict[str, Any]) -> list[Finding]:
@@ -83,12 +103,12 @@ def replication_findings(result: dict[str, Any]) -> list[Finding]:
     if rdd.get("ran") and rdd.get("suspect"):
         findings.append(Finding(
             attack="rdd-manipulation",
-            title="Possible manipulation of the running variable at the cutoff",
-            category="identification", severity="high", confidence=0.7,
-            detail=(f"Density discontinuity screening: {rdd['above']} observations just above vs "
-                    f"{rdd['below']} just below the cutoff (binomial p={rdd['p']}). Sorting around "
-                    f"the threshold would invalidate the RDD."),
-            recommendation="Run a formal McCrary / Cattaneo-Jansson-Ma density test and inspect covariate continuity.",
+            title="Density of the running variable jumps at the cutoff (McCrary test)",
+            category="identification", severity="high", confidence=0.75,
+            detail=(f"McCrary density test: log-density jump theta={rdd['theta']} "
+                    f"(z={rdd['z']}, p={rdd['p']}). A discontinuity in the density is evidence of "
+                    f"sorting/manipulation around the threshold, which invalidates the RDD."),
+            recommendation="Confirm with rddensity (Cattaneo-Jansson-Ma) and check covariate continuity at the cutoff.",
             data=rdd))
     sens = result.get("rdd_sensitivity", {})
     if sens.get("ran") and (not sens.get("sign_stable") or sens.get("share_significant", 1) < 0.5):
@@ -99,16 +119,38 @@ def replication_findings(result: dict[str, Any]) -> list[Finding]:
             recommendation="Report the CCT optimal bandwidth and a bandwidth-sensitivity plot.",
             data=sens))
 
+    # Staggered DiD via Callaway-Sant'Anna + the TWFE-vs-CS (Goodman-Bacon) check.
+    bac = result.get("did_callaway_santanna", {})
+    if bac.get("twfe_biased"):
+        findings.append(Finding(
+            attack="did-twfe-bias",
+            title="TWFE estimate diverges from Callaway-Sant'Anna (negative-weight bias)",
+            category="identification", severity="high", confidence=0.8,
+            detail=(f"The plain two-way fixed-effects estimate is {bac.get('twfe')}, but the "
+                    f"Callaway-Sant'Anna overall ATT is {bac.get('cs_overall')} "
+                    f"(gap {bac.get('gap')}{', sign flip' if bac.get('sign_flip') else ''}). With "
+                    f"staggered timing, TWFE uses already-treated units as controls and can be badly biased."),
+            recommendation="Report a heterogeneity-robust estimator (Callaway-Sant'Anna / Sun-Abraham), not plain TWFE.",
+            data={k: bac.get(k) for k in ("twfe", "cs_overall", "cs_se", "gap", "sign_flip")}))
+    if bac.get("cs_pretrend_violated"):
+        findings.append(Finding(
+            attack="did-pretrends",
+            title="Pre-trends: Callaway-Sant'Anna lead effects are non-zero",
+            category="identification", severity="high", confidence=0.75,
+            detail="Pre-treatment event-study effects are significantly different from zero, which "
+                   "undercuts the parallel-trends assumption.",
+            recommendation="Show the event-study plot and justify parallel trends.",
+            data={"event_study": bac.get("event_study")}))
+
     did = result.get("did_event_study", {})
-    if did.get("ran") and did.get("pretrend_violated"):
+    if did.get("ran") and did.get("pretrend_violated") and not bac:
         findings.append(Finding(
             attack="did-pretrends",
             title="Pre-trends: lead coefficients are jointly non-zero",
-            category="identification", severity="high", confidence=0.75,
-            detail=(f"The event-study leads reject the parallel-trends assumption "
-                    f"(joint p={did.get('joint_pretrend_p')}). Pre-treatment differences undercut the DiD."),
-            recommendation="Show the event-study plot; consider Callaway-Sant'Anna / Sun-Abraham for staggered timing.",
-            data={"leads": did.get("leads"), "joint_pretrend_p": did.get("joint_pretrend_p")}))
+            category="identification", severity="high", confidence=0.7,
+            detail=f"The event-study leads reject parallel trends (joint p={did.get('joint_pretrend_p')}).",
+            recommendation="Show the event-study plot; use Callaway-Sant'Anna / Sun-Abraham for staggered timing.",
+            data={"leads": did.get("leads")}))
 
     return findings
 

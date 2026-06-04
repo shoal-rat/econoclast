@@ -49,6 +49,7 @@ def review(
     no_llm: bool = typer.Option(False, "--no-llm", help="Deterministic forensics only (no model calls)."),
     no_literature: bool = typer.Option(False, "--no-literature", help="Skip online literature retrieval."),
     no_blind: bool = typer.Option(False, "--no-blind", help="Don't blind author identity (not recommended)."),
+    ensemble: int = typer.Option(1, "--ensemble", help="Run each LLM attack N times; keep findings that recur."),
     offline: bool = typer.Option(False, "--offline", help="Force the offline mock model."),
     attacks: str | None = typer.Option(None, "--attacks", help="Comma-separated subset of attack names."),
     replicate: Path | None = typer.Option(None, "--replicate",
@@ -83,6 +84,7 @@ def review(
             use_llm=not no_llm,
             use_literature=not no_literature,
             blind=not no_blind,
+            ensemble=ensemble,
             replication_config=str(replicate) if replicate else None,
             max_workers=workers,
             progress=lambda m: status.update(f"[bold]Reviewing…[/bold] {m}"),
@@ -141,6 +143,66 @@ def verify(
     out_dir = out or Path(f"econoclast-{'paper' if is_url(paper) else Path(paper).stem}")
     written = _write_report(report, out_dir, fmt)
     console.print("\n[dim]Wrote:[/dim] " + ", ".join(str(p) for p in written))
+
+
+@app.command()
+def batch(
+    path: str = typer.Argument(..., help="Folder or glob of papers (.pdf/.tex/.txt)."),
+    out: Path = typer.Option(Path("econoclast-batch"), "--out", "-o"),
+    full: bool = typer.Option(False, "--verify", help="Use full verify (fetch data + replicate) per paper."),
+    backend: str = typer.Option("auto", "--backend", "-b"),
+    no_llm: bool = typer.Option(False, "--no-llm"),
+    config: Path | None = typer.Option(None, "--config", "-c"),
+    verbose: bool = typer.Option(False, "--verbose", "-v"),
+) -> None:
+    """Review a whole folder of papers and rank them by fragility."""
+    setup_logging("DEBUG" if verbose else "WARNING")
+    import glob as _glob
+
+    from econoclast.agent.harness import Econoclast
+    from econoclast.config import Settings, cli_routes
+
+    papers = _find_papers(path, _glob)
+    if not papers:
+        console.print(f"[red]No papers found at:[/red] {path}")
+        raise typer.Exit(1)
+    console.print(f"[bold]{len(papers)} papers[/bold] to review.\n")
+
+    settings = Settings.load(str(config) if config else None)
+    if backend in ("claude", "codex"):
+        settings.routes = cli_routes(f"{backend}_cli")
+    eco = Econoclast(settings=settings, force_mock=backend == "mock")
+
+    rows = []
+    out.mkdir(parents=True, exist_ok=True)
+    for i, pp in enumerate(papers, 1):
+        stem = Path(pp).stem[:40]
+        console.print(f"[dim]({i}/{len(papers)})[/dim] {stem}")
+        try:
+            if full:
+                report = eco.verify(str(pp), use_llm=not no_llm)
+            else:
+                report = eco.review(str(pp), use_llm=not no_llm)
+            _write_report(report, out / stem, "all")
+            frag = report.fragility
+            rows.append({"paper": stem, "title": report.paper_title[:70],
+                         "fragility": frag.get("score", 0), "band": frag.get("band", ""),
+                         "findings": len(report.findings),
+                         "integrity": frag.get("integrity_violation", False)})
+        except Exception as exc:  # noqa: BLE001
+            console.print(f"  [red]failed:[/red] {exc}")
+            rows.append({"paper": stem, "title": "(failed)", "fragility": -1,
+                         "band": "error", "findings": 0, "integrity": False})
+
+    rows.sort(key=lambda r: r["fragility"], reverse=True)
+    _write_batch_summary(rows, out)
+    table = Table(title="Batch summary (most fragile first)", header_style="bold")
+    for col in ("fragility", "band", "findings", "paper"):
+        table.add_column(col)
+    for r in rows:
+        table.add_row(str(r["fragility"]), r["band"], str(r["findings"]), r["paper"])
+    console.print(table)
+    console.print(f"\n[dim]Wrote per-paper reports and summary to[/dim] {out}/")
 
 
 @app.command()
@@ -348,6 +410,30 @@ def setup(
 
 
 @app.command()
+def reproduce(
+    package: Path = typer.Argument(..., help="Replication-package folder (or a single script)."),
+    yes: bool = typer.Option(False, "--yes", "-y", help="Actually run the code (it is untrusted; off by default)."),
+    timeout: int = typer.Option(900, "--timeout", help="Seconds before the run is killed."),
+) -> None:
+    """Run an author's replication package and report what it produced (opt-in, untrusted)."""
+    setup_logging("INFO")
+    from econoclast.replication.runner import run_replication_package
+
+    if not yes:
+        console.print("[yellow]This runs the authors' code, which is untrusted. It is NOT sandboxed.[/yellow]")
+        console.print("Re-run with --yes (ideally inside a container or throwaway VM) to proceed.")
+    res = run_replication_package(package, allow_code=yes, timeout=timeout)
+    if not res.get("ran"):
+        console.print(f"[dim]Did not run:[/dim] {res.get('reason')}")
+        return
+    status = "[green]succeeded[/green]" if res.get("succeeded") else f"[red]exit {res.get('returncode')}[/red]"
+    console.print(f"Ran {res.get('entrypoint')} ({res.get('kind')}): {status}")
+    if res.get("stdout_tail"):
+        console.print("[dim]--- output tail ---[/dim]")
+        console.print(res["stdout_tail"][-2000:])
+
+
+@app.command()
 def mcp() -> None:
     """Run the Econoclast MCP server (stdio) so Claude Code / Codex can call it as a tool."""
     from econoclast.mcp_server import main as mcp_main
@@ -364,6 +450,35 @@ def version() -> None:
 # --------------------------------------------------------------------------- #
 def _s(x) -> str:
     return "" if x is None else str(x)
+
+
+_PAPER_EXTS = (".pdf", ".tex", ".txt", ".md")
+
+
+def _find_papers(path: str, glob_module) -> list[Path]:
+    is_glob = ("*" in path) or ("?" in path)
+    if is_glob:
+        hits = [Path(p) for p in glob_module.glob(path, recursive=True)]
+    elif Path(path).is_dir():
+        hits = [p for p in Path(path).rglob("*") if p.is_file()]
+    else:
+        hits = [Path(path)] if Path(path).exists() else []
+    return sorted(p for p in hits if p.suffix.lower() in _PAPER_EXTS)
+
+
+def _write_batch_summary(rows, out_dir: Path) -> None:
+    import csv
+
+    with open(out_dir / "summary.csv", "w", newline="", encoding="utf-8") as fh:
+        w = csv.DictWriter(fh, fieldnames=["fragility", "band", "findings", "integrity", "paper", "title"])
+        w.writeheader()
+        for r in rows:
+            w.writerow(r)
+    lines = ["# Econoclast batch summary", "",
+             "| Fragility | Band | Findings | Paper |", "|---|---|---|---|"]
+    for r in rows:
+        lines.append(f"| {r['fragility']} | {r['band']} | {r['findings']} | {r['title']} |")
+    (out_dir / "summary.md").write_text("\n".join(lines), encoding="utf-8")
 
 
 def _write_report(report, out_dir, fmt: str):

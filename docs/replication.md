@@ -53,8 +53,37 @@ Econoclast enumerates the cross-product of `controls × fixed_effects × cluster
 - a **reference spec** (all controls) for comparison;
 - a **specification-curve plot** (`spec_curve.png`).
 
-If `running_var`/`cutoff` are set it adds an **RDD manipulation test** (density discontinuity) and a
-**bandwidth-sensitivity** check; if the DiD fields are set it runs an **event-study pre-trend test**.
+## Design-specific estimators
+
+When the config carries the relevant columns, replication mode also runs the proper design checks.
+
+For RDD (`running_var`, `cutoff`), it runs the **McCrary (2008) density test**: it bins the running
+variable so the cutoff is a bin edge, fits a triangular-kernel local linear to the histogram on each
+side, and tests the log-density jump `theta = log f(+) - log f(-)` with McCrary's standard error. A
+significant jump is evidence of sorting at the threshold. It also reports a bandwidth-sensitivity
+scan. For publication, confirm with `rddensity` (Cattaneo-Jansson-Ma); the local-linear estimator has
+boundary bias, so the flag is deliberately conservative.
+
+For staggered DiD, give a `cohort` column (each unit's first treated period, 0 for never-treated) or
+the single-treatment fields (`unit`, `time`, `treated`, `treat_time`). It then computes:
+
+- **Callaway and Sant'Anna (2021)** group-time effects ATT(g, t) from clean 2x2 comparisons against
+  not-yet-treated units, aggregated into an overall effect and an event study, with a clustered
+  bootstrap for standard errors and a pre-trend check on the leads.
+- **Sun and Abraham (2021)** interaction-weighted event study, as an independent cross-check.
+- A **Goodman-Bacon style** contrast: the plain two-way fixed-effects estimate against the
+  Callaway-Sant'Anna overall effect. A large gap or a sign flip flags the negative-weights bias that
+  makes TWFE unreliable under staggered timing, and Econoclast raises a finding for it.
+
+## Running the authors' own code (opt-in)
+
+```bash
+econoclast reproduce path/to/replication-package --yes
+```
+
+This runs the package's entry point (`master.do`, `run.R`, `main.py`, or a `Makefile`) and reports
+what it produced, so you can compare it to the paper. It is off by default and runs untrusted code
+with no real sandbox, so use it inside a container or a throwaway VM.
 
 ## 3. As part of a full review
 
