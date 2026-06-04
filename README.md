@@ -6,7 +6,7 @@
   <a href="https://github.com/shoal-rat/econoclast/actions/workflows/ci.yml"><img src="https://github.com/shoal-rat/econoclast/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT"></a>
   <img src="https://img.shields.io/badge/python-3.10%2B-blue.svg" alt="Python 3.10+">
-  <img src="https://img.shields.io/badge/tests-43%20passing-brightgreen.svg" alt="tests">
+  <img src="https://img.shields.io/badge/tests-57%20passing-brightgreen.svg" alt="tests">
   <a href="https://github.com/astral-sh/ruff"><img src="https://img.shields.io/badge/lint-ruff-261230.svg" alt="ruff"></a>
 </p>
 
@@ -96,6 +96,44 @@ econoclast forensics examples/demo_paper.txt
 | `econoclast attacks` / `models` | list the checks / show model routing |
 
 ## Inside Claude Code and Codex
+
+You ask once and it finishes. The agent works out what it has, states what it is about to do, and only
+asks you a question if it cannot find the paper. The data and the exact result default on their own.
+
+```mermaid
+sequenceDiagram
+    actor Econ as Economist
+    participant Agent as AI agent
+    participant Eco as Econoclast
+    participant Web
+
+    Econ->>Agent: "Check this paper for me." (a link, a file, or a title)
+    Agent->>Eco: understand the request
+    alt paper not given
+        Eco-->>Agent: ask one thing
+        Agent->>Econ: "Which paper? A link, a file, or the title."
+        Econ-->>Agent: the paper
+    end
+    Note over Agent,Eco: the claim and the data default on their own, nothing else to ask
+    Agent->>Econ: "I'll check the math, hunt for fragile choices, and re-run the data. About 2 minutes."
+    Agent->>+Eco: verify(paper)
+    Eco->>Web: fetch the paper, look for the public data
+    alt data is public
+        Eco->>Eco: forensics, critique, method research, re-run the data
+    else no public data
+        Eco->>Eco: forensics, critique, method research (text only)
+        Note right of Eco: says so plainly, keeps every result
+    end
+    Eco-->>-Agent: fragility verdict + findings, each with a quote
+    Agent->>Econ: one-sentence verdict first, then the serious findings in plain words
+    loop refine, no restart
+        Econ->>Agent: "show me the full report" / "use my data" / "check Table 4"
+        Agent->>Econ: answer from the report, or re-run only that part
+    end
+```
+
+How that flow was designed, and the friction it removed, is written up in
+[docs/interaction-design.md](docs/interaction-design.md).
 
 If you already run one of these agents, Econoclast can use its subscription, so there is no second API
 key to manage. Install once, let the agent set itself up, then talk to it.

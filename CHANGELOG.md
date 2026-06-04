@@ -6,6 +6,12 @@ All notable changes to Econoclast are documented here. Format follows
 ## [Unreleased]
 
 ### Added (talk once, let the AI decide)
+- Interaction redesign for non-technical users: intake now returns a one-line `plan` and a single
+  `blocking_question` so the agent states what it will do and proceeds, instead of opening a question
+  round. The data and the claim default on their own; only the paper is ever required. The skill,
+  command, and Codex prompt add feedforward before the run, graceful degradation when no data is found,
+  and refine-without-restart. The whole flow and the friction it removes is documented with before/after
+  sequence diagrams in `docs/interaction-design.md`, and the new interaction diagram is in the README.
 - Conversational intake: `agent/intake.py` + the `econoclast_intake` MCP tool turn a free-text request
   into a structured understanding plus a short list of plain-language questions, so a non-technical
   user can be served in one message.

@@ -16,6 +16,7 @@
     },
     "questions": {
       "type": "array",
+      "description": "plain-language questions worth mentioning; only the paper one is ever required",
       "items": {
         "type": "object",
         "properties": {
@@ -25,6 +26,8 @@
         "required": ["ask", "required"]
       }
     },
+    "blocking_question": { "type": "string", "description": "the one question to ask before proceeding (the paper); empty when ready" },
+    "plan": { "type": "string", "description": "feedforward: a one-line statement of what the agent will do without asking; empty when not ready" },
     "ready": { "type": "boolean", "description": "true if a paper is known and the run can proceed" },
     "next": { "enum": ["verify", "ask_user"] }
   },

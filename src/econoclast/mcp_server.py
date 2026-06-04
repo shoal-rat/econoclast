@@ -98,14 +98,18 @@ def build_server():
         """Understand a free-text request and return what to ask the user, if anything.
 
         Call this first when a non-technical user asks you to check a paper. It works out
-        what they already gave (a paper link/path, a dataset, a specific claim) and returns
-        a short list of plain-language questions for whatever is missing. If `ready` is true,
-        go straight to econoclast_verify with the understood paper (and data, if any).
+        what they already gave (a paper link/path, a dataset, a specific claim).
+
+        Only the paper is ever required. If `ready` is true, do NOT open a question round:
+        state `plan` to the user in one line (what you will do and roughly how long) and go
+        straight to econoclast_verify with the understood paper (and data, if any). Ask only
+        `blocking_question` when it is non-empty (the paper itself is missing).
 
         Args:
             request: the user's message, verbatim.
         Returns:
-            {understood: {paper, paper_kind, data, claim}, questions: [...], ready: bool, next: str}
+            {understood: {paper, paper_kind, data, claim}, questions: [...],
+             blocking_question: str, plan: str, ready: bool, next: str}
         """
         from econoclast.agent.intake import build_intake
         from econoclast.config import Settings

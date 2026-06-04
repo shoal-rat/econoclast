@@ -10,8 +10,10 @@ one request and ask as little as possible.
 The user said: `$ARGUMENTS`
 
 1. Work out what they gave you (a link, a file, a title, maybe a dataset). If MCP is available, call
-   `econoclast_intake` to get the missing questions. If the paper is clear, proceed. If not, ask the
-   one plain-language question for the paper and wait.
+   `econoclast_intake`. If the paper is clear, say in one line what you are about to do and roughly how
+   long, then proceed. Do not open a question round. Ask only when the paper itself is missing, then
+   wait. The dataset and the exact claim are never gates: it downloads the data and defaults to the
+   headline result.
 
 2. Run the whole check with the `econoclast_verify` MCP tool, or in the shell:
    ```bash

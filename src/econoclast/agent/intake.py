@@ -73,7 +73,13 @@ def _clean(d: dict) -> dict:
 
 
 def needed_questions(state: dict) -> list[dict]:
-    """The short list of plain-language questions still worth asking."""
+    """The short list of plain-language questions still worth asking.
+
+    Only the paper is ever required. The data and the claim are optional: the agent
+    states what it will assume (see ``default_plan``) and proceeds, rather than opening
+    a question round. They are returned here only so the agent can mention them in
+    passing, never to block.
+    """
     qs: list[dict] = []
     if not state.get("paper"):
         qs.append({
@@ -97,6 +103,22 @@ def needed_questions(state: dict) -> list[dict]:
     return qs
 
 
+def default_plan(state: dict) -> str:
+    """A one-line, plain-language statement of what the agent will do without asking.
+
+    This is feedforward, not a question: the user hears what is about to happen and roughly
+    how long, and can change it, but nothing blocks. It encodes the defaults (headline claim,
+    auto-download the public data) so a non-technical user never has to choose.
+    """
+    target = f"the result about {state['claim']}" if state.get("claim") else "the paper's main result"
+    if state.get("data"):
+        data = "re-run it on the dataset you gave me"
+    else:
+        data = "find the public data it cites and re-run it"
+    return (f"I'll check {target}: re-derive the numbers, look for the choices that produced it, "
+            f"research any method I don't cover, and {data}. This takes a couple of minutes.")
+
+
 def build_intake(request: str, settings=None) -> dict:  # noqa: ANN001
     """Top-level: understand the request and return what to ask, if anything."""
     router = None
@@ -106,9 +128,12 @@ def build_intake(request: str, settings=None) -> dict:  # noqa: ANN001
         router = ModelRouter(settings)
     state = understand_request(request, router)
     questions = needed_questions(state)
+    ready = bool(state.get("paper"))
     return {
         "understood": state,
         "questions": questions,
-        "ready": bool(state.get("paper")),
-        "next": "verify" if state.get("paper") else "ask_user",
+        "blocking_question": next((q["ask"] for q in questions if q["required"]), ""),
+        "plan": default_plan(state) if ready else "",
+        "ready": ready,
+        "next": "verify" if ready else "ask_user",
     }

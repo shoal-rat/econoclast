@@ -3,7 +3,12 @@
 from __future__ import annotations
 
 from econoclast.agent.comprehend import merge_designs
-from econoclast.agent.intake import build_intake, needed_questions, understand_request
+from econoclast.agent.intake import (
+    build_intake,
+    default_plan,
+    needed_questions,
+    understand_request,
+)
 
 
 def test_understand_request_finds_url():
@@ -32,6 +37,20 @@ def test_build_intake_ready_when_paper_present():
     assert out["ready"] is True and out["next"] == "verify"
     out2 = build_intake("can you check a paper for me?", settings=None)
     assert out2["ready"] is False and out2["next"] == "ask_user"
+
+
+def test_build_intake_states_a_plan_and_no_blocking_question_when_ready():
+    out = build_intake("review https://example.org/p.pdf", settings=None)
+    assert out["plan"] and out["blocking_question"] == ""  # proceed by default, do not ask
+    out2 = build_intake("can you check a paper for me?", settings=None)
+    assert out2["plan"] == "" and out2["blocking_question"]  # the one required ask
+
+
+def test_default_plan_reflects_data_and_claim_defaults():
+    no_data = default_plan({"paper": "p.pdf", "data": "", "claim": ""})
+    assert "main result" in no_data and "public data" in no_data
+    with_data = default_plan({"paper": "p.pdf", "data": "d.csv", "claim": "the wage effect"})
+    assert "the wage effect" in with_data and "dataset you gave me" in with_data
 
 
 def test_merge_designs_adds_model_reading():

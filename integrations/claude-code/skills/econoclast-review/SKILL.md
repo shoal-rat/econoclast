@@ -8,21 +8,21 @@ description: Check, referee, red-team, or stress-test an empirical economics pap
 Your job is to take one request and finish the whole thing, asking as little as possible. The person
 may not be technical. Do not make them learn any commands or config. Talk to them in plain language.
 
-## 1. Understand the request, then ask only what is missing
+## 1. Understand the request; proceed on sensible defaults
 
 Call the MCP tool `econoclast_intake(request)` with the user's message (or, if MCP is not available,
 work it out yourself). It returns what you already have (a paper link, a path, a dataset, a specific
-claim) and a short list of plain-language questions for anything missing.
+claim), a one-line `plan`, and a `blocking_question`.
 
-- If it found the paper, just proceed. Do not ask redundant questions.
-- If the paper is missing, ask the one question it gives you, in plain words, for example: "Which
-  paper should I check? Paste a link, a file, or the exact title."
-- The dataset and the specific claim are optional. Mention them once if helpful, but do not block on
-  them: Econoclast will try to download the data itself and will default to the paper's headline
-  result.
-
-Keep it to one short round of questions. A non-technical economist should be able to answer in a
-sentence.
+- If `ready` is true, do not open a question round. State the `plan` in one line so the user knows
+  what is about to happen and roughly how long ("I'll check the main result: re-derive the numbers,
+  look for the choices that produced it, find the public data and re-run it. A couple of minutes."),
+  then go. This is feedforward, not a question.
+- Ask `blocking_question` only when it is non-empty, which happens only when the paper itself is
+  missing: "Which paper should I check? Paste a link, a file, or the exact title."
+- The dataset and the specific claim are never gates. Econoclast downloads the data itself and
+  defaults to the paper's headline result. Do not ask for them; the plan already says what it assumes,
+  and the user can correct it in passing.
 
 ## 2. Run the whole check
 
@@ -35,6 +35,11 @@ Call `econoclast_verify(paper, data)` (data only if the user gave it). One call 
   paper against them,
 - it looks in the paper for a public dataset, downloads it, and re-runs the headline result across
   many defensible specifications.
+
+The call runs for a couple of minutes and returns once. You already told the user what it is doing, so
+do not go silent wondering; wait for it. If the data turns out not to be public, this is not a failure:
+Econoclast still returns the full text-based verdict (forensics and critique) and says plainly that it
+could not re-run the data. Pass that on, and offer to add the re-run if they can share the file.
 
 If `econoclast_verify` is not available, run `econoclast verify "<paper>"` in the shell (install with
 `pip install "econoclast[all] @ git+https://github.com/shoal-rat/econoclast"` if missing). For the
@@ -51,6 +56,10 @@ Translate the result for someone who does not know the jargon.
 - If a reported number is internally impossible (statcheck, GRIM), say so plainly, and add that this
   is often an honest typo, not misconduct.
 - Offer the full written report (`report.md` / `report.html`) if they want the detail.
+
+Then let them refine without starting over. Answer follow-ups ("what about Table 4?", "show me the
+full report") straight from the report you already have. Only re-run `econoclast_verify` when they
+give you something new, like the dataset file or a different claim, and say what changed.
 
 ## Rules
 
