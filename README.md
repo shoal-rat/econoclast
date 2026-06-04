@@ -30,6 +30,11 @@ cover, looks in the paper for a public dataset, downloads it, works out which re
 headline result, and re-runs it across hundreds of defensible specifications. Out comes a fragility
 score and a list of specific, quotable problems.
 
+When a publisher or data host blocks the plain download (a 403, a Cloudflare or JavaScript wall, a
+cookie gate), Econoclast does not give up: it opens a real browser to get past the wall, and if the
+link is dead it searches the web, lets the model pick the most likely source, and downloads from
+there. Enable it with the `browser` extra (below).
+
 ## A native-LLM tool
 
 Econoclast is not its own model and has no offline mode. It runs on the intelligence of the agent you
@@ -57,7 +62,12 @@ Or with pip (you also need Claude Code or Codex installed and logged in):
 pip install "econoclast[all] @ git+https://github.com/shoal-rat/econoclast"
 econoclast setup     # detect Claude Code / Codex, write the config, register the MCP tool
 econoclast backend   # check which agent it will use
+playwright install chromium   # one-time: enables the browser fallback for blocked downloads
 ```
+
+The `[all]` install includes the `browser` extra (Playwright). The `playwright install chromium` step
+downloads the browser it drives, or it reuses your installed Chrome. Skip it and the direct download
+still works; you just lose the anti-crawler fallback.
 
 ## Commands
 

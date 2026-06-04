@@ -206,7 +206,7 @@ class Econoclast:
         from econoclast.ingest.fetch import resolve_source
         from econoclast.ingest.paper import load_paper
 
-        paper_file = resolve_source(str(source), cache_dir=self.settings.cache_dir)
+        paper_file = resolve_source(str(source), cache_dir=self.settings.cache_dir, backend=self.backend)
         paper = load_paper(paper_file)
 
         # Read the paper once with the model; reuse it for data discovery and the review.
@@ -256,19 +256,21 @@ class Econoclast:
         )
         from econoclast.replication.discover import DataLink, find_dataset_links
 
+        # A search query for the browser fallback, when a direct link is blocked or absent.
+        avail = (comp or {}).get("data_availability") or ""
+        query = f"{paper.title} {avail}".strip()[:200]
+
         # Prefer the data links the model found, then the keyword-detected ones.
         links = [DataLink(kind="direct", ref=u, url=u, score=3.0)
                  for u in (comp or {}).get("data_links", [])[:4]
                  if isinstance(u, str) and u.lower().startswith("http")]
         links += find_dataset_links(paper)
-        if not links:
-            return None, None
         work = self.settings.cache_path() / "data"
         for link in links[:5]:
             if progress:
                 progress(f"fetching dataset: {link.kind} {link.ref[:40]}")
             try:
-                files = acquire_dataset(link, work)
+                files = acquire_dataset(link, work, query=query, backend=self.backend)
             except Exception as exc:  # noqa: BLE001
                 log.warning("acquire failed for %s: %s", link.url, exc)
                 continue
@@ -276,6 +278,20 @@ class Econoclast:
             if main is not None:
                 log.info("Using dataset %s (from %s)", main.name, link.url)
                 return str(main), link.url
+
+        # No usable link worked: let the browser search the web for the dataset.
+        if query:
+            if progress:
+                progress("searching the web for the dataset")
+            try:
+                files = acquire_dataset(DataLink(kind="direct", ref="", url="", supported=True),
+                                        work, query=query, backend=self.backend)
+                main = pick_main_table(find_tabular_files(files), paper)
+                if main is not None:
+                    log.info("Using dataset %s (from a web search)", main.name)
+                    return str(main), "web search"
+            except Exception as exc:  # noqa: BLE001
+                log.warning("dataset web search failed: %s", exc)
         return None, None
 
     # -------------------------------------------------------------- helpers

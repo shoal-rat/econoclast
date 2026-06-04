@@ -25,8 +25,14 @@ def is_url(s: str) -> bool:
     return s.lower().startswith(("http://", "https://"))
 
 
-def resolve_source(path_or_url: str, cache_dir: str | None = None) -> str:
-    """Return a local file path for ``path_or_url`` (downloading if it's a URL)."""
+def resolve_source(path_or_url: str, cache_dir: str | None = None, *, backend=None) -> str:  # noqa: ANN001
+    """Return a local file path for ``path_or_url`` (downloading if it's a URL).
+
+    Tries a plain HTTP fetch first. If that is blocked (403, Cloudflare, a JS-gated
+    page) it falls back to a real browser, which renders the page and carries the
+    site's cookies. ``backend`` (a model) is used only to rank search hits when the
+    direct link is dead.
+    """
     if not is_url(path_or_url):
         return path_or_url
 
@@ -35,6 +41,18 @@ def resolve_source(path_or_url: str, cache_dir: str | None = None) -> str:
     url = _canonicalize(path_or_url)
     log.info("Fetching %s", url)
 
+    try:
+        return _http_fetch(url, out_dir)
+    except httpx.HTTPError as exc:
+        log.warning("Direct fetch failed (%s); trying a browser.", exc)
+
+    got = _browser_paper(url, out_dir, backend)
+    if got:
+        return got
+    raise RuntimeError(f"Could not fetch {url} (the direct path and the browser fallback both failed).")
+
+
+def _http_fetch(url: str, out_dir: Path) -> str:
     with httpx.Client(follow_redirects=True, timeout=60.0, headers=_HEADERS) as client:
         resp = client.get(url)
         resp.raise_for_status()
@@ -61,6 +79,27 @@ def resolve_source(path_or_url: str, cache_dir: str | None = None) -> str:
         dest = out_dir / (_safe_name(url) + ".txt")
         dest.write_text(_html_to_text(html), encoding="utf-8")
         return str(dest)
+
+
+def _browser_paper(url: str, out_dir: Path, backend=None) -> str | None:  # noqa: ANN001
+    """Browser fallback for a paper: get the PDF if there is one, else the rendered text."""
+    from econoclast.ingest.browser import browser_fetch_file, browser_fetch_page
+
+    got = browser_fetch_file(url, prefer_ext=(".pdf",))
+    if got:
+        body, ctype = got
+        if "pdf" in ctype or body[:5].lstrip()[:4] == b"%PDF":
+            dest = out_dir / (_safe_name(url) + ".pdf")
+            dest.write_bytes(body)
+            log.info("Fetched %s via the browser.", url)
+            return str(dest)
+    html = browser_fetch_page(url)
+    if html:
+        dest = out_dir / (_safe_name(url) + ".txt")
+        dest.write_text(_html_to_text(html), encoding="utf-8")
+        log.info("Rendered %s via the browser.", url)
+        return str(dest)
+    return None
 
 
 def _canonicalize(url: str) -> str:

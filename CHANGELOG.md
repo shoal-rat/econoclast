@@ -5,6 +5,16 @@ All notable changes to Econoclast are documented here. Format follows
 
 ## [Unreleased]
 
+### Added (browser fallback for blocked downloads)
+- When the plain HTTP download is blocked by an anti-crawler defence (a 403, Cloudflare, a JavaScript
+  gate, a cookie wall), Econoclast now falls back to a real headless browser (Playwright, the new
+  `browser` extra): it renders the page, carries the site's cookies, and pulls the file through the
+  warmed-up context. If the direct link is dead it searches the web in the browser, lets the model rank
+  the hits, and downloads from the best one. Applies to both paper fetching (`ingest/fetch.py`) and
+  dataset acquisition (`replication/acquire.py`), with a search-only last resort by paper title. The
+  fallback degrades gracefully to a one-line install hint when Playwright is absent. New module
+  `ingest/browser.py`.
+
 ### Changed (native-LLM only: Claude Code or Codex)
 - Econoclast is now a pure native-LLM tool. Removed the deterministic forensics entirely (statcheck,
   GRIM/GRIMMER, p-curve, caliper, TIVA, Benford, terminal-digit) and the whole offline path. The
