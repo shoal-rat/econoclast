@@ -40,7 +40,7 @@ def branch_and_merge(
     for label, prompt in strategies:
         sys = f"{system}\n\n{_EPISTEMICS}\n\n{_UNTRUSTED}\n\n{_JSON_CONTRACT}"
         try:
-            resp = ctx.router.complete(
+            resp = ctx.backend.complete(
                 "attacker", [Message(role="system", content=sys), Message(role="user", content=prompt)],
                 response_format="json")
             runs.append((label, _parse_findings(resp.json(), attack_name, default_category)))
@@ -57,7 +57,7 @@ def branch_and_merge(
         [{"strategy": lbl, "findings": [f.to_dict() for f in fs]} for lbl, fs in runs],
         ensure_ascii=False)[:14000]
     try:
-        resp = ctx.router.complete(
+        resp = ctx.backend.complete(
             "referee",
             [Message(role="system", content=_JUDGE + "\n\n" + _JSON_CONTRACT),
              Message(role="user", content="Candidate findings by strategy:\n" + payload)],

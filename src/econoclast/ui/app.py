@@ -32,13 +32,10 @@ def main() -> None:
                "for p-hacking, cherry-picking and specification search.")
 
     settings = Settings.load()
-    live = settings.has_live_models()
 
     with st.sidebar:
         st.header("Settings")
-        st.write(f"**Live LLM:** {'available' if live else 'mock only'}")
-        offline = st.checkbox("Offline (deterministic only)", value=not live)
-        use_lit = st.checkbox("Retrieve online literature", value=live and not offline)
+        use_lit = st.checkbox("Retrieve online literature", value=True)
         st.divider()
         st.subheader("Attacks")
         names = [a.name for a in all_attacks()]
@@ -52,10 +49,13 @@ def main() -> None:
         if target is None:
             st.error("Provide a file or a valid path.")
             return
-        with st.spinner("Running forensics and adversarial attacks…"):
-            eco = Econoclast(settings=settings, force_mock=offline)
-            report = eco.review(target, attack_names=chosen or None,
-                                use_llm=not offline, use_literature=use_lit)
+        try:
+            eco = Econoclast(settings=settings)
+        except Exception as exc:  # noqa: BLE001
+            st.error(str(exc))
+            return
+        with st.spinner("Reading the paper and running the adversarial attacks…"):
+            report = eco.review(target, attack_names=chosen or None, use_literature=use_lit)
         _render(report)
 
 
@@ -95,13 +95,6 @@ def _render(report) -> None:
                 st.markdown(f"> {q}")
             if f.recommendation:
                 st.success("**Fix:** " + f.recommendation)
-
-    st.subheader("Deterministic forensic battery")
-    st.dataframe(
-        [{"test": r["name"], "verdict": r["verdict"], "inputs": r["n_inputs"], "summary": r["summary"]}
-         for r in report.forensic_results],
-        use_container_width=True, hide_index=True,
-    )
 
     st.divider()
     d1, d2, d3 = st.columns(3)

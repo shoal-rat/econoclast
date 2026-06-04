@@ -1,4 +1,4 @@
-"""Attacks: deterministic forensic wrappers + LLM-reasoning critiques."""
+"""Attacks: grounded LLM critiques, citation checks, and method audits."""
 
 from econoclast.attacks.base import (
     CATEGORIES,

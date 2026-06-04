@@ -85,7 +85,7 @@
 
   <!-- self action: the work -->
   <path class="msg" d="M806,362 L852,362 L852,386 L810,386" marker-end="url(#aDark)"/>
-  <text class="lbls" x="862" y="380">forensics, critique, method research, re-run the data</text>
+  <text class="lbls" x="862" y="380">critique, method research, re-run the data</text>
 
   <!-- Note B: graceful degradation -->
   <rect class="note" x="706" y="402" width="452" height="30" rx="7"/>

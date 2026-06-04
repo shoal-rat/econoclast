@@ -3,8 +3,8 @@
 This is the bridge that lets an economist say only "verify this paper": the model
 reads the empirical section and the dataset's columns, then writes the
 specification-curve config (which column is the outcome, which is the treatment,
-what to vary). Without a live model we can't reliably guess which column is the
-focal regressor, so we skip rather than fabricate one.
+what to vary). If the columns can't be mapped to the paper's specification we skip
+rather than fabricate one.
 """
 
 from __future__ import annotations
@@ -61,10 +61,7 @@ def _data_preview(data_path: str, n: int = 3) -> tuple[list[str], str]:
     return cols, preview
 
 
-def generate_spec_config(paper, data_path: str, router) -> SpecConfig | None:  # noqa: ANN001
-    if not router.is_live():
-        log.info("No live model — cannot auto-configure the replication from the paper.")
-        return None
+def generate_spec_config(paper, data_path: str, backend) -> SpecConfig | None:  # noqa: ANN001
     try:
         cols, preview = _data_preview(data_path)
     except Exception as exc:  # noqa: BLE001
@@ -77,7 +74,7 @@ def generate_spec_config(paper, data_path: str, router) -> SpecConfig | None:  #
         f"DATASET {data_path}\n{preview}\n\n{_CONTRACT}"
     )
     try:
-        resp = router.complete("attacker", [
+        resp = backend.complete("attacker", [
             Message(role="system", content=_SYSTEM + "\n\n" + _CONTRACT),
             Message(role="user", content=user),
         ], response_format="json")

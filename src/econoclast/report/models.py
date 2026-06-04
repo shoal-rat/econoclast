@@ -16,7 +16,6 @@ class Report:
     source_format: str
     designs: list[str]
     n_claims: int
-    forensic_results: list[dict] = field(default_factory=list)
     findings: list[Finding] = field(default_factory=list)
     fragility: dict = field(default_factory=dict)
     referee: dict = field(default_factory=dict)
@@ -42,7 +41,6 @@ class Report:
             "fragility": self.fragility,
             "referee": self.referee,
             "findings": [f.to_dict() for f in self.findings_sorted()],
-            "forensics": self.forensic_results,
             "meta": self.meta,
         }
 

@@ -2,17 +2,19 @@
 
 Empirical economics uses too many methods to hardcode a checker for each one. New estimators arrive
 every year, and any single paper can combine several. So Econoclast does not try to own every method.
-It owns a fast path of built-in checks and, for everything else, it does what a good referee does when
-they hit something unfamiliar: look it up, then verify.
+It does what a good referee does when they hit something unfamiliar: look it up, then verify.
 
 This is the design rule for the whole project, not just for econometrics.
 
-## The fast path
+## One path, not two
 
-A handful of checks are coded directly because they are exact and cheap: statcheck, GRIM and GRIMMER,
-p-curve, the caliper test, TIVA, Benford, the McCrary density test, and the Callaway-Sant'Anna and
-Sun-Abraham estimators. When a paper uses one of these designs, Econoclast runs the real test and the
-result is reproducible to the digit. These are the methods in `COVERED_METHODS`.
+Econoclast runs on the intelligence of a single live model, reached through the Claude Code or Codex
+CLI. There is no separate layer of pre-coded statistical tests and no offline mode. The verdict comes
+from a grounded model critique, a research-then-verify pass for any method the critique is unsure of,
+a citation check against Crossref, and the specification-curve replication when the paper's data is
+public. The replication still uses real estimators (the McCrary density test, Callaway-Sant'Anna,
+Sun-Abraham) under the hood, but it runs only when there is data to re-run, not as a standalone digit
+check.
 
 ## When the method is not covered
 
@@ -50,5 +52,5 @@ network, and shell calls, but it is not a sandbox.
 A tool that only knows the methods its authors thought to code would be wrong about most papers within
 a year. Tying every model claim to a quote or a retrieved source, marking what could not be verified,
 and trying more than one approach when the answer is not obvious is what keeps the reviews honest as
-the set of methods keeps growing. The built-in checks are a fast path, not the limit of what
-Econoclast can question.
+the set of methods keeps growing. Look-it-up-then-verify is the rule for every method, not a fallback
+for the ones nobody coded.

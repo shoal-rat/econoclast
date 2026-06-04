@@ -8,16 +8,10 @@ understanding plus a short list of questions a human can answer.
 
 from __future__ import annotations
 
-import re
-
 from econoclast.llm.base import Message
 from econoclast.logging import get_logger
 
 log = get_logger("agent.intake")
-
-_URL = re.compile(r"https?://\S+")
-_PATH = re.compile(r"[\w./\\~-]+\.(?:pdf|tex|txt|md|csv|dta|xlsx|parquet)", re.IGNORECASE)
-_DATA_EXT = (".csv", ".dta", ".xlsx", ".parquet", ".zip", ".tsv")
 
 _SYSTEM = (
     "You are the intake for a paper-checking tool used by economists who are not technical. From the "
@@ -30,37 +24,19 @@ _CONTRACT = (
 )
 
 
-def understand_request(text: str, router=None) -> dict:  # noqa: ANN001
-    """Parse a free-text request into {paper, paper_kind, data, claim}."""
-    if router is not None and router.is_live():
-        try:
-            resp = router.complete("extractor",
-                                   [Message(role="system", content=_SYSTEM + "\n\n" + _CONTRACT),
-                                    Message(role="user", content=text[:4000])],
-                                   response_format="json")
-            data = resp.json()
-            if isinstance(data, dict) and data.get("paper_kind"):
-                return _clean(data)
-        except Exception as exc:  # noqa: BLE001
-            log.warning("intake LLM parse failed, using heuristics: %s", exc)
-    return _heuristic(text)
-
-
-def _heuristic(text: str) -> dict:
-    paper = data = ""
-    kind = "none"
-    for u in _URL.findall(text):
-        if u.lower().endswith(_DATA_EXT):
-            data = data or u
-        elif not paper:
-            paper, kind = u, "url"
-    for m in _PATH.finditer(text):
-        tok = m.group(0)
-        if tok.lower().endswith(_DATA_EXT):
-            data = data or tok
-        elif not paper:
-            paper, kind = tok, "path"
-    return {"paper": paper, "paper_kind": kind, "data": data, "claim": ""}
+def understand_request(text: str, backend) -> dict:  # noqa: ANN001
+    """Read a free-text request and return {paper, paper_kind, data, claim}."""
+    try:
+        resp = backend.complete("extractor",
+                                [Message(role="system", content=_SYSTEM + "\n\n" + _CONTRACT),
+                                 Message(role="user", content=text[:4000])],
+                                response_format="json")
+        data = resp.json()
+        if isinstance(data, dict) and data.get("paper_kind"):
+            return _clean(data)
+    except Exception as exc:  # noqa: BLE001
+        log.warning("intake parse failed: %s", exc)
+    return {"paper": "", "paper_kind": "none", "data": "", "claim": ""}
 
 
 def _clean(d: dict) -> dict:
@@ -119,14 +95,14 @@ def default_plan(state: dict) -> str:
             f"research any method I don't cover, and {data}. This takes a couple of minutes.")
 
 
-def build_intake(request: str, settings=None) -> dict:  # noqa: ANN001
+def build_intake(request: str, settings=None, *, backend=None) -> dict:  # noqa: ANN001
     """Top-level: understand the request and return what to ask, if anything."""
-    router = None
-    if settings is not None:
-        from econoclast.llm.router import ModelRouter
+    if backend is None:
+        from econoclast.config import Settings
+        from econoclast.llm.backend import detect_backend
 
-        router = ModelRouter(settings)
-    state = understand_request(request, router)
+        backend = detect_backend(settings or Settings.load())
+    state = understand_request(request, backend)
     questions = needed_questions(state)
     ready = bool(state.get("paper"))
     return {

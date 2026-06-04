@@ -1,9 +1,9 @@
-"""The orchestrator: load -> detect design -> gather literature -> attack -> synthesise.
+"""The orchestrator: load -> read -> gather literature -> attack -> synthesise.
 
 This is a deliberately *bounded* pipeline rather than an open-ended ReAct loop:
 the attack set is fixed and design-gated, every attack is grounded in the paper,
-and the run is reproducible. Forensics run first (fast, offline); LLM attacks run
-concurrently; the referee synthesises a verdict last.
+and the run is reproducible. The model reads the paper, the LLM attacks run
+concurrently, and the referee synthesises a verdict last.
 """
 
 from __future__ import annotations
@@ -20,7 +20,7 @@ from econoclast.config import Settings
 from econoclast.ingest.paper import load_paper
 from econoclast.ingest.sanitize import normalize_for_match, quote_supported
 from econoclast.literature import LiteratureSearcher
-from econoclast.llm.router import ModelRouter
+from econoclast.llm.backend import Backend, detect_backend
 from econoclast.logging import get_logger
 from econoclast.report.fragility import compute_fragility
 from econoclast.report.models import Report
@@ -35,12 +35,11 @@ class Econoclast:
         settings: Settings | None = None,
         *,
         config_path: str | None = None,
-        force_mock: bool = False,
+        backend: Backend | None = None,
     ) -> None:
         self.settings = settings or Settings.load(config_path)
-        if force_mock:
-            self.settings.offline = True
-        self.router = ModelRouter(self.settings, force_mock=force_mock)
+        # `backend` injection is for tests; normally we find Claude Code or Codex.
+        self.backend = backend or detect_backend(self.settings)
         self.searcher: LiteratureSearcher | None = None
         if self.settings.literature.enabled:
             self.searcher = LiteratureSearcher(self.settings.literature)
@@ -51,7 +50,6 @@ class Econoclast:
         paper_path: str | Path,
         *,
         attack_names: list[str] | None = None,
-        use_llm: bool = True,
         use_literature: bool = True,
         blind: bool = True,
         ensemble: int = 1,
@@ -70,12 +68,12 @@ class Econoclast:
         designs = detect_designs(paper.text)
         methods = detect_methods(paper.text)
 
-        # Let the model read the paper and decide, when one is available.
+        # The model reads the paper and decides design, methods, claim, and data.
         comp = comprehension
-        if comp is None and use_llm and self.router.is_live():
+        if comp is None:
             if progress:
                 progress("reading the paper")
-            comp = comprehend(paper, self.router)
+            comp = comprehend(paper, self.backend)
         if comp:
             designs = merge_designs(designs, comp)
         log.info("Design(s): %s | method(s): %s", design_label(designs), ", ".join(sorted(methods)) or "-")
@@ -83,7 +81,7 @@ class Econoclast:
         ctx = AttackContext(
             paper=paper,
             settings=self.settings,
-            router=self.router,
+            backend=self.backend,
             designs=designs,
             methods=methods,
             searcher=self.searcher if use_literature else None,
@@ -101,37 +99,20 @@ class Econoclast:
             ctx.literature = self._gather_literature(paper, designs)
             ctx.methodology = self._gather_methodology(methods)
 
-        include_llm = use_llm and self.router.is_live()
-        attacks = select_attacks(attack_names, include_llm=True, include_forensic=True)
-
         run_names: list[str] = []
         skipped: list[str] = []
-        forensic_attacks: list[Attack] = []
-        concurrent_attacks: list[Attack] = []
-        for a in attacks:
+        to_run: list[Attack] = []
+        for a in select_attacks(attack_names):
             if not a.gate(ctx):
                 skipped.append(f"{a.name} (n/a)")
                 continue
-            if a.requires_llm and not include_llm:
-                skipped.append(f"{a.name} (no LLM)")
-                continue
             run_names.append(a.name)
-            # Deterministic forensics run sequentially; LLM and network attacks
-            # (e.g. citation-check) run together in the thread pool.
-            (forensic_attacks if a.kind == "deterministic" else concurrent_attacks).append(a)
+            to_run.append(a)
 
         findings: list[Finding] = []
-
-        # Deterministic forensics first (fast, offline, ordered).
-        for a in forensic_attacks:
-            if progress:
-                progress(f"forensic: {a.name}")
-            findings.extend(self._safe_run(a, ctx))
-
-        # LLM + network attacks concurrently.
-        if concurrent_attacks:
+        if to_run:
             with cf.ThreadPoolExecutor(max_workers=max_workers) as pool:
-                futs = {pool.submit(self._safe_run, a, ctx): a for a in concurrent_attacks}
+                futs = {pool.submit(self._safe_run, a, ctx): a for a in to_run}
                 for fut in cf.as_completed(futs):
                     a = futs[fut]
                     if progress:
@@ -172,8 +153,7 @@ class Econoclast:
             except Exception as exc:  # noqa: BLE001
                 log.warning("Replication failed: %s", exc)
 
-        forensic_dicts = [r.to_dict() for r in _ordered(ctx.forensic_results)]
-        fragility = compute_fragility(findings, forensic_dicts)
+        fragility = compute_fragility(findings)
         referee = synthesize_referee(ctx, findings, fragility)
 
         report = Report(
@@ -182,19 +162,17 @@ class Econoclast:
             source_format=paper.source_format,
             designs=sorted(designs),
             n_claims=len(paper.claims),
-            forensic_results=forensic_dicts,
             findings=findings,
             fragility=fragility,
             referee=referee,
             meta={
                 "version": __version__,
                 "timestamp": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-                "llm_live": include_llm,
+                "backend": self.backend.label,
                 "blind_review": blind,
                 "deep": deep,
                 "methods": sorted(methods),
-                "models": self._models_used() if include_llm else [],
-                "usage": self.router.summary(),
+                "usage": self.backend.summary(),
                 "attacks_run": run_names,
                 "attacks_skipped": skipped,
                 "n_literature": len(ctx.literature),
@@ -212,7 +190,6 @@ class Econoclast:
         source: str,
         *,
         data: str | None = None,
-        use_llm: bool = True,
         use_literature: bool = True,
         blind: bool = True,
         deep: bool = False,
@@ -225,6 +202,7 @@ class Econoclast:
 
         Hand it a path or a URL. If you already have the data, pass ``data``.
         """
+        from econoclast.agent.comprehend import comprehend
         from econoclast.ingest.fetch import resolve_source
         from econoclast.ingest.paper import load_paper
 
@@ -232,13 +210,9 @@ class Econoclast:
         paper = load_paper(paper_file)
 
         # Read the paper once with the model; reuse it for data discovery and the review.
-        comp = None
-        if use_llm and self.router.is_live():
-            from econoclast.agent.comprehend import comprehend
-
-            if progress:
-                progress("reading the paper")
-            comp = comprehend(paper, self.router)
+        if progress:
+            progress("reading the paper")
+        comp = comprehend(paper, self.backend)
 
         info = {"requested": True, "provided": bool(data), "found": bool(data),
                 "source": "provided" if data else None, "autoconfig": False, "note": ""}
@@ -256,18 +230,18 @@ class Econoclast:
                 progress("auto-configuring the replication")
             from econoclast.agent.autoconfig import generate_spec_config
 
-            cfg = generate_spec_config(paper, data_path, self.router)
+            cfg = generate_spec_config(paper, data_path, self.backend)
             if cfg is not None:
                 spec_path = str(self.settings.cache_path() / "auto_spec.yaml")
                 Path(spec_path).write_text(cfg.to_yaml(), encoding="utf-8")
                 info["autoconfig"] = True
             else:
-                info["note"] = "Found data but could not auto-configure the replication (need a live model)."
+                info["note"] = "Found data but could not map its columns to the paper's specification."
         else:
-            info["note"] = "No public dataset link found in the paper; ran forensics + critique only."
+            info["note"] = "No public dataset link found in the paper; ran the critique on the text only."
 
         report = self.review(
-            paper_file, use_llm=use_llm, use_literature=use_literature, blind=blind,
+            paper_file, use_literature=use_literature, blind=blind,
             deep=deep, allow_code=allow_code, data_path=data_path, comprehension=comp,
             replication_config=spec_path, max_workers=max_workers, progress=progress,
         )
@@ -354,15 +328,6 @@ class Econoclast:
             log.warning("Literature search failed: %s", exc)
             return []
 
-    def _models_used(self) -> list[str]:
-        names = []
-        for role in ("attacker", "referee", "extractor"):
-            for ref in self.settings.models_for(role):
-                tag = f"{ref.provider}:{ref.model}"
-                if tag not in names:
-                    names.append(tag)
-        return names
-
 
 def _ground(findings: list[Finding], paper_norm: str) -> list[Finding]:
     """Mechanical grounding gate: down-weight LLM findings whose quote isn't in the paper."""
@@ -374,11 +339,3 @@ def _ground(findings: list[Finding], paper_norm: str) -> list[Finding]:
             f.confidence = min(f.confidence, 0.3)
             f.data["quote_unverified"] = True
     return findings
-
-
-_FORENSIC_ORDER = ["statcheck", "grim", "grimmer", "p-curve", "caliper", "tiva", "benford", "rounding"]
-
-
-def _ordered(results):
-    rank = {name: i for i, name in enumerate(_FORENSIC_ORDER)}
-    return sorted(results, key=lambda r: rank.get(r.name, 99))

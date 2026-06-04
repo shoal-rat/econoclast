@@ -28,18 +28,22 @@ claim), a one-line `plan`, and a `blocking_question`.
 
 Call `econoclast_verify(paper, data)` (data only if the user gave it). One call does everything:
 
-- the deterministic statistical forensics (statcheck, GRIM, p-curve, z-bunching, and so on),
-- the adversarial critique (specification search, cherry-picking, identification, missing robustness,
-  HARKing, over-claiming),
-- for any method Econoclast does not cover, it researches the method's assumptions and checks the
-  paper against them,
+- the grounded adversarial critique (specification search, cherry-picking, identification,
+  robustness coverage, HARKing, over-claiming, literature contradiction), with every finding tied to
+  a verbatim quote from the paper,
+- for any method Econoclast does not cover, a research-then-verify methodology audit that pulls the
+  method's assumptions and checks the paper against them,
+- a citation check against Crossref,
 - it looks in the paper for a public dataset, downloads it, and re-runs the headline result across
   many defensible specifications.
 
+A referee pass writes the synthesis; unquoted findings are discounted.
+
 The call runs for a couple of minutes and returns once. You already told the user what it is doing, so
 do not go silent wondering; wait for it. If the data turns out not to be public, this is not a failure:
-Econoclast still returns the full text-based verdict (forensics and critique) and says plainly that it
-could not re-run the data. Pass that on, and offer to add the re-run if they can share the file.
+Econoclast still returns the full text-based verdict (the critique and the methodology audit) and says
+plainly that it could not re-run the data. Pass that on, and offer to add the re-run if they can share
+the file.
 
 If `econoclast_verify` is not available, run `econoclast verify "<paper>"` in the shell (install with
 `pip install "econoclast[all] @ git+https://github.com/shoal-rat/econoclast"` if missing). For the
@@ -53,8 +57,8 @@ Translate the result for someone who does not know the jargon.
   result looks fragile: it holds in only about a fifth of the equally reasonable ways to run it."
 - For each serious finding, say what it means and why it matters, in plain words, and quote the part
   of the paper it is about. Skip the nitpicks unless asked.
-- If a reported number is internally impossible (statcheck, GRIM), say so plainly, and add that this
-  is often an honest typo, not misconduct.
+- If the check finds a reported number that is internally inconsistent, say so plainly, and add that
+  this is often an honest typo, not misconduct.
 - Offer the full written report (`report.md` / `report.html`) if they want the detail.
 
 Then let them refine without starting over. Answer follow-ups ("what about Table 4?", "show me the

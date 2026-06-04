@@ -2,19 +2,18 @@
 
 from __future__ import annotations
 
+from _fake import FakeBackend
 from econoclast.attacks.base import AttackContext, Finding
 from econoclast.attacks.designs import COVERED_METHODS, detect_methods, method_coverage
 from econoclast.attacks.dynamic import _BANNED, DynamicCheckAttack
 from econoclast.attacks.methodology import MethodologyAuditAttack
 from econoclast.config import Settings
 from econoclast.ingest.models import Paper
-from econoclast.llm.router import ModelRouter
 
 
 def _ctx(text, **kw):
-    s = Settings()
-    return AttackContext(paper=Paper(title="t", text=text), settings=s,
-                         router=ModelRouter(s, force_mock=True), **kw)
+    return AttackContext(paper=Paper(title="t", text=text), settings=Settings(),
+                         backend=FakeBackend(), **kw)
 
 
 def test_detect_methods_and_coverage():

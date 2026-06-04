@@ -3,8 +3,8 @@
 Aggregates findings into a single 0-100 "fragility" number plus a category
 breakdown and a verdict band. The score saturates (many medium findings can't
 exceed a couple of decisive ones) and an *integrity override* forces a high band
-whenever a deterministic test proves a reported number impossible or a p-value
-inconsistency flips significance.
+whenever a finding shows a reported number is internally impossible or
+inconsistent.
 """
 
 from __future__ import annotations
@@ -32,18 +32,18 @@ def _band(score: float, integrity: bool) -> tuple[str, str]:
     return BANDS[-1][1], BANDS[-1][2]
 
 
-def compute_fragility(findings: list[Finding], forensic_results: list[dict]) -> dict:
+def compute_fragility(findings: list[Finding]) -> dict:
     raw = sum(f.weight for f in findings)
     score = round(100 * (1 - math.exp(-raw / 12.0)), 1)
 
-    # Integrity override: statcheck decision errors or GRIM/GRIMMER impossibilities.
-    integrity = False
-    for r in forensic_results:
-        if r.get("verdict") == "suspicious" and r.get("name") in ("statcheck", "grim", "grimmer"):
-            if r.get("name") == "statcheck" and r.get("stats", {}).get("decision_errors", 0) > 0:
-                integrity = True
-            elif r.get("name") in ("grim", "grimmer") and r.get("stats", {}).get("inconsistent", 0) > 0:
-                integrity = True
+    # Integrity override: a high-confidence finding that a reported statistic is
+    # internally impossible or inconsistent can't be a "minor" concern.
+    integrity = any(
+        f.category in ("reporting_inconsistency", "data_integrity")
+        and f.severity in ("high", "critical")
+        and f.confidence >= 0.6
+        for f in findings
+    )
     if integrity:
         score = max(score, 45.0)
 

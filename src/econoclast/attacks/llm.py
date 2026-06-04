@@ -145,9 +145,6 @@ class LLMAttack(Attack):
         raise NotImplementedError
 
     def run(self, ctx: AttackContext) -> list[Finding]:
-        if not ctx.llm_live:
-            log.info("Skipping LLM attack '%s' (no live model configured).", self.name)
-            return []
         messages = [
             Message(role="system",
                     content=self.system_prompt + "\n\n" + _EPISTEMICS + "\n\n" + _UNTRUSTED + "\n\n" + _JSON_CONTRACT),
@@ -159,7 +156,7 @@ class LLMAttack(Attack):
             try:
                 # Vary temperature across runs for sampling diversity.
                 temp = 0.2 + 0.25 * i if n > 1 else None
-                resp = ctx.router.complete("attacker", messages, response_format="json", temperature=temp)
+                resp = ctx.backend.complete("attacker", messages, response_format="json", temperature=temp)
             except Exception as exc:  # noqa: BLE001
                 log.warning("attack '%s' LLM call failed: %s", self.name, exc)
                 continue

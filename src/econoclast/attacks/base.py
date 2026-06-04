@@ -14,10 +14,9 @@ from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:  # avoid import cycles at runtime
     from econoclast.config import Settings
-    from econoclast.forensics.base import ForensicResult
     from econoclast.ingest.models import Paper
     from econoclast.literature import LiteratureSearcher, LitRef
-    from econoclast.llm.router import ModelRouter
+    from econoclast.llm.backend import Backend
 
 SEVERITY_WEIGHT = {"info": 0.0, "low": 1.0, "medium": 2.5, "high": 5.0, "critical": 8.0}
 
@@ -83,11 +82,10 @@ class Finding:
 class AttackContext:
     paper: Paper
     settings: Settings
-    router: ModelRouter
+    backend: Backend
     designs: set[str] = field(default_factory=set)
     searcher: LiteratureSearcher | None = None
     literature: list[LitRef] = field(default_factory=list)
-    forensic_results: list[ForensicResult] = field(default_factory=list)
     run_dir: Path | None = None
     blind: bool = True  # blind author identity to LLM attacks (anti prestige-bias)
     ensemble: int = 1  # run each LLM attack N times and keep findings that recur
@@ -98,18 +96,14 @@ class AttackContext:
     data_path: str | None = None  # dataset, when available (enables dynamic checks)
     notes: dict[str, Any] = field(default_factory=dict)
 
-    @property
-    def llm_live(self) -> bool:
-        return self.router.is_live()
-
 
 class Attack:
     """Base class. Subclasses set metadata and implement :meth:`run`."""
 
     name: str = "attack"
     category: str = "robustness"
-    kind: str = "llm"  # "deterministic" | "llm" | "replication"
-    requires_llm: bool = False
+    kind: str = "llm"  # "llm" | "network" | "replication"
+    requires_llm: bool = True
     description: str = ""
 
     def gate(self, ctx: AttackContext) -> bool:

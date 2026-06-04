@@ -27,9 +27,8 @@ class Table:
 class StatClaim:
     """One reported statistic with enough context to attack it.
 
-    Most fields are optional; a given claim populates only what it carries. The
-    forensic modules filter the claim list for the fields they need (statcheck
-    wants a test statistic + p; GRIM wants mean + n; p-curve wants p-values).
+    Most fields are optional; a given claim populates only what it carries (a test
+    statistic and p-value, a mean and n, a coefficient and standard error, ...).
     """
 
     raw: str

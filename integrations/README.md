@@ -9,9 +9,10 @@ There are three ways to wire it up.
 
 ---
 
-## 1. MCP server (recommended — works in both)
+## 1. MCP server (recommended, works in both)
 
-Exposes `econoclast_forensics`, `econoclast_review`, and `econoclast_list_attacks` as tools.
+Exposes `econoclast_intake`, `econoclast_verify`, `econoclast_review`, `econoclast_replicate`, and
+`econoclast_list_attacks` as tools.
 
 ```bash
 pip install "econoclast[mcp,pdf]"
@@ -22,15 +23,16 @@ pip install "econoclast[mcp,pdf]"
 claude mcp add econoclast -- econoclast mcp
 ```
 
-**Codex** — add to `~/.codex/config.toml` (see [`codex/config-snippet.toml`](codex/config-snippet.toml)):
+**Codex**, add to `~/.codex/config.toml` (see [`codex/config-snippet.toml`](codex/config-snippet.toml)):
 ```toml
 [mcp_servers.econoclast]
 command = "econoclast"
 args = ["mcp"]
 ```
 
-Now just ask: *"Use econoclast to red-team paper.pdf."* The agent calls `econoclast_forensics`
-(arithmetic facts: statcheck, GRIM, p-curve, z-bunching…) and reasons over the result.
+Now just ask: *"Use econoclast to red-team paper.pdf."* The agent calls `econoclast_verify`, which
+reads the paper, runs the grounded critique, researches any method it does not cover, and re-runs the
+data when it is public.
 
 ---
 
@@ -67,15 +69,16 @@ Copy [`codex/prompts/econoclast.md`](codex/prompts/econoclast.md) into `~/.codex
 
 ---
 
-## Or: the CLI through your subscription (no API key)
+## Or: the CLI through your subscription
 
-If you have either CLI installed and logged in, Econoclast can drive it as the model backend — no
-separate API key:
+Econoclast has no model of its own. It drives whichever of these CLIs you have installed and logged in,
+using that CLI's own subscription auth, so there is no API key:
 
 ```bash
 econoclast review paper.pdf --backend claude    # uses your Claude Code login
 econoclast review paper.pdf --backend codex     # uses your Codex/ChatGPT login
 ```
 
-It also auto-detects: with no API key set but `claude` (or `codex`) on PATH, `econoclast review`
-uses it automatically. See the main [README](../README.md#-one-click--no-api-key-setup).
+Left on `auto`, it picks whichever of `claude` or `codex` is on PATH. If neither is, it stops with a
+clear message. Run `econoclast backend` to see which one it will use. See the main
+[README](../README.md#inside-claude-code-and-codex).

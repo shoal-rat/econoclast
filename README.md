@@ -6,7 +6,7 @@
   <a href="https://github.com/shoal-rat/econoclast/actions/workflows/ci.yml"><img src="https://github.com/shoal-rat/econoclast/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT"></a>
   <img src="https://img.shields.io/badge/python-3.10%2B-blue.svg" alt="Python 3.10+">
-  <img src="https://img.shields.io/badge/tests-57%20passing-brightgreen.svg" alt="tests">
+  <img src="https://img.shields.io/badge/tests-48%20passing-brightgreen.svg" alt="tests">
   <a href="https://github.com/astral-sh/ruff"><img src="https://img.shields.io/badge/lint-ruff-261230.svg" alt="ruff"></a>
 </p>
 
@@ -25,28 +25,23 @@ plain language. From a terminal it is one command:
 econoclast verify https://arxiv.org/abs/2401.12345
 ```
 
-That downloads the paper, runs the offline statistical checks and the model critique, researches any
-method it does not already cover, looks in the paper for a public dataset, downloads it, works out
-which regression is the headline result, and re-runs it across hundreds of defensible specifications.
-Out comes a fragility score and a list of specific, quotable problems.
+That downloads the paper, reads it, runs the model critique, researches any method it does not already
+cover, looks in the paper for a public dataset, downloads it, works out which regression is the
+headline result, and re-runs it across hundreds of defensible specifications. Out comes a fragility
+score and a list of specific, quotable problems.
 
-## Two layers
+## A native-LLM tool
 
-The first layer is a set of statistical checks that run offline with no API key and no network.
-statcheck recomputes every p-value from its test statistic. GRIM and GRIMMER catch means and standard
-deviations that are impossible for integer data. p-curve, z-statistic bunching at 1.96, TIVA, Benford,
-and terminal-digit tests look at the shape of the reported numbers. These are arithmetic, so a flag
-here is hard to argue with.
+Econoclast is not its own model and has no offline mode. It runs on the intelligence of the agent you
+already use: it drives **Claude Code** or **Codex** as a subprocess, with their subscription auth, so
+there is no API key to manage and nothing to host. If neither CLI is on your PATH, Econoclast tells you
+to install one rather than degrading to something weaker.
 
-The second layer is a set of adversarial critiques written by a model: specification search,
-cherry-picked samples and windows, weak identification, missing robustness checks, hypotheses that
-look invented after the fact, and claims the evidence does not support. Every finding has to quote the
-paper, a mechanical check confirms the quote is really there, and a separate referee pass turns the
-pile into one verdict.
-
-You can stop at the first layer (instant, free) or add the second with any backend: OpenAI,
-Anthropic, Google, OpenRouter, a local model through Ollama, or your existing Claude Code or Codex
-subscription with no separate key.
+What it produces is one set of adversarial critiques, written by the model and held to a hard rule:
+specification search, cherry-picked samples and windows, weak identification, missing robustness
+checks, hypotheses that look invented after the fact, and claims the evidence does not support. Every
+finding has to quote the paper, a mechanical check confirms the quote is really there, the score
+discounts anything left unquoted, and a separate referee pass turns the pile into one verdict.
 
 ## Install
 
@@ -56,44 +51,27 @@ One command installs everything and registers the agent tool:
 curl -fsSL https://raw.githubusercontent.com/shoal-rat/econoclast/main/install.sh | bash
 ```
 
-Or with pip:
+Or with pip (you also need Claude Code or Codex installed and logged in):
 
 ```bash
 pip install "econoclast[all] @ git+https://github.com/shoal-rat/econoclast"
-econoclast setup     # detect your backend, write the config, register the MCP tool
-```
-
-Try the offline checks on the bundled demo. No keys needed:
-
-```bash
-econoclast forensics examples/demo_paper.txt
-```
-
-```text
-                          Minimum Wages and Teen Employment (synthetic)
- Test       Verdict      N   Summary
- statcheck  suspicious   2   2/2 reported p-values disagree with the recomputed value, 2 flip
-                             significance at .05
- grim       suspicious   1   1/1 reported means are impossible for integer data of that N
- grimmer    suspicious   1   1/1 (mean, SD, N) triples are impossible for integer data
- p-curve    suspicious   6   p-curve is flat/left-skewed: consistent with p-hacking
- caliper    suspicious  18   test statistics bunch just above the significance thresholds
+econoclast setup     # detect Claude Code / Codex, write the config, register the MCP tool
+econoclast backend   # check which agent it will use
 ```
 
 ## Commands
 
 | Command | What it does |
 |---|---|
-| `econoclast verify <path or URL>` | the whole pipeline: paper, forensics, critique, fetch data, re-run it |
-| `econoclast review <path or URL>` | forensics plus model critique, no data step |
-| `econoclast forensics <path or URL>` | only the offline statistical checks (no key) |
+| `econoclast verify <path or URL>` | the whole pipeline: read, critique, fetch the data, re-run it |
+| `econoclast review <path or URL>` | the model critique, no data step |
 | `econoclast replicate <spec.yaml>` | specification curve plus McCrary / Callaway-Sant'Anna from a config |
 | `econoclast reproduce <package>` | run the authors' own code (opt-in, untrusted) |
 | `econoclast batch <folder>` | review a folder of papers and rank them by fragility |
 | `econoclast setup` | detect your backend, write the config, register the agent tool |
 | `econoclast mcp` | run the MCP server so Claude Code / Codex can call Econoclast |
 | `econoclast ui` | the Streamlit web app |
-| `econoclast attacks` / `models` | list the checks / show model routing |
+| `econoclast attacks` / `backend` | list the checks / show which agent will run |
 
 ## Inside Claude Code and Codex
 
@@ -130,9 +108,8 @@ econoclast review paper.pdf --backend codex
 ## What you get
 
 A fragility score from 0 to 100 with a verdict band, the list of findings (each with a severity, a
-confidence, the quote it rests on, and a suggested fix), the full forensic battery, and a short
-referee summary of what would change the verdict. It renders to Markdown, JSON, and a self-contained
-HTML page.
+confidence, the quote it rests on, and a suggested fix), and a short referee summary of what would
+change the verdict. It renders to Markdown, JSON, and a self-contained HTML page.
 
 ```text
 +-- Minimum Wages and Teen Employment -------------------------------+
@@ -144,28 +121,22 @@ HTML page.
 
 ## The checks
 
-Every check returns the same kind of finding, so statistics and model reasoning land in one report and
-one score. The deterministic ones need no key. The model ones must quote the paper, and they only fire
-when the design matches.
+Every check returns the same kind of finding, so they land in one report and one score. The model ones
+must quote the paper, and they only fire when the design matches.
 
-| Check | Kind | What it catches | Needs a model |
-|---|---|---|---|
-| statcheck | deterministic | a reported p that disagrees with its own test statistic, especially when it flips significance | no |
-| GRIM / GRIMMER | deterministic | means and SDs that no integer data of that N can produce | no |
-| p-curve | deterministic | a flat or left-skewed curve of significant p-values | no |
-| caliper | deterministic | z-statistics piled up just above 1.96, 1.645, or 2.576 | no |
-| TIVA, R-index | deterministic | z-scores too alike to be independent; an inflated success rate | no |
-| Benford, terminal-digit | deterministic | first-digit anomalies and rounding/heaping in the numbers | no |
-| citation-check | network | references that do not resolve to a real work in Crossref | no |
-| specification search | model | researcher degrees of freedom and a headline spec chosen from many | yes |
-| cherry-picking | model | selective samples, windows, subgroups, outcomes, and dropped data | yes |
-| identification | model | parallel-trends and staggered-DiD problems, RDD manipulation, IV exclusion and weak instruments | yes |
-| robustness coverage | model | the standard checks that are conveniently missing | yes |
-| HARKing, over-claiming | model | post-hoc mechanisms and claims the design cannot support | yes |
-| literature contradiction | model | novelty and positioning claims checked against retrieved related work | yes |
+| Check | What it catches |
+|---|---|
+| specification search | researcher degrees of freedom and a headline spec chosen from many |
+| cherry-picking | selective samples, windows, subgroups, outcomes, and dropped data |
+| identification | parallel-trends and staggered-DiD problems, RDD manipulation, IV exclusion and weak instruments |
+| robustness coverage | the standard checks that are conveniently missing |
+| HARKing, over-claiming | post-hoc mechanisms and claims the design cannot support |
+| literature contradiction | novelty and positioning claims checked against retrieved related work |
+| methodology audit | for a method it does not cover, the identifying assumptions and diagnostics it skips |
+| citation-check | references that do not resolve to a real work in Crossref |
 
-Run `econoclast attacks` for the list, or `--attacks statcheck,caliper` for a subset. With
-`--ensemble N` each model check runs N times and only findings that recur survive. The algorithms and
+Run `econoclast attacks` for the full list, or `--attacks cherry-picking,identification` for a subset.
+With `--ensemble N` each check runs N times and only findings that recur survive. The algorithms and
 references are in [docs/attacks.md](docs/attacks.md).
 
 ## It researches what it doesn't know
@@ -211,25 +182,18 @@ single regression table. More in [docs/replication.md](docs/replication.md).
 </p>
 
 The pipeline is fixed and ordered rather than an open-ended loop. The attack set is design-gated,
-every model finding is tied to a quote, and a separate model writes the final synthesis. It trades
-some autonomy for being auditable, which is the right trade for a tool whose job is rigour. Notes in
-[docs/architecture.md](docs/architecture.md).
+every model finding is tied to a quote, and a separate model pass writes the final synthesis. It
+trades some autonomy for being auditable, which is the right trade for a tool whose job is rigour.
+Notes in [docs/architecture.md](docs/architecture.md).
 
-Models are addressed by role, not by name. An attack asks for `extractor`, `attacker`, or `referee`,
-and the router resolves it to a model with a fallback and keeps a running cost. Configure it in
-`econoclast.yaml`:
+There is one backend: whichever of Claude Code or Codex it finds, used for every step. Prefer one with
+`--backend claude` or `--backend codex`, or set it in `econoclast.yaml`:
 
 ```yaml
-models:
-  extractor: anthropic:claude-haiku-4-5-20251001
-  attacker:
-    - anthropic:claude-opus-4-8
-    - openai:gpt-4o
-  referee: anthropic:claude-opus-4-8
+backend: claude   # auto | claude | codex
 ```
 
-Point a role at a local model with `{ provider: ollama, model: "llama3.1:70b" }`, or hand everything
-to [LiteLLM](https://github.com/BerriAI/litellm). Details in [docs/models.md](docs/models.md).
+Details in [docs/models.md](docs/models.md).
 
 ## Keeping the review honest
 
@@ -249,13 +213,11 @@ not accuse anyone of anything.
 
 ## Limitations
 
-Read [docs/interpreting-reports.md](docs/interpreting-reports.md) before you quote a finding. The
-distribution tests are weak on small samples and assume conditions a single paper may not satisfy;
-they are capped at low confidence and printed with their caveats. Model findings can be wrong, which
-is why each one ships with the quote it rests on. The replication runs your specification of the
-multiverse, so the agent has to read the variables off the paper correctly, and the estimators are
-screening tools rather than a copy of the authors' exact pipeline. Do not paste a fragility score into
-a public accusation.
+Read [docs/interpreting-reports.md](docs/interpreting-reports.md) before you quote a finding. Model
+findings can be wrong, which is why each one ships with the quote it rests on and why anything unquoted
+is discounted. The replication runs your specification of the multiverse, so the agent has to read the
+variables off the paper correctly, and the estimators are screening tools rather than a copy of the
+authors' exact pipeline. Do not paste a fragility score into a public accusation.
 
 ## Contributing
 

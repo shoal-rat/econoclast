@@ -1,17 +1,22 @@
 # Architecture
 
 Econoclast is a **bounded, reproducible pipeline**, not an open-ended agent loop. The attack set is
-fixed and design-gated, every LLM finding is grounded in a quote, and a separate referee model does
-the final synthesis. This trades some autonomy for auditability — the right trade for a tool whose
+fixed and design-gated, every LLM finding is grounded in a quote, and a separate referee pass does
+the final synthesis. This trades some autonomy for auditability, the right trade for a tool whose
 whole job is rigour.
+
+It is a native-LLM tool. It ships no model and no API client; it borrows the intelligence of the
+agent you already run by driving the `claude` or `codex` CLI as a subprocess under that CLI's own
+subscription auth. If neither CLI is on PATH it stops with a clear message rather than degrading to
+something weaker.
 
 ```
 econoclast/
 ├── ingest/        PDF (PyMuPDF/pypdf) + LaTeX parsing, section segmentation, claim harvesting
-├── forensics/     deterministic statistical tests (statcheck, GRIM, GRIMMER, p-curve, caliper, …)
 ├── literature/    keyless search (OpenAlex, S2, arXiv, Crossref) + local corpus + keyword ranking
-├── llm/           provider-agnostic router (OpenAI-compatible, Anthropic, Google, Ollama, LiteLLM)
-├── attacks/       the unified Attack/Finding model: forensic wrappers + LLM critiques + design gating
+├── llm/           the backend: drive the claude or codex CLI as a subprocess (backend.py)
+├── attacks/       the unified Attack/Finding model: LLM critiques + methodology audit + design gating
+├── replication/   specification-curve / multiverse re-estimation when the data is public
 ├── agent/         the orchestrator + referee synthesis
 ├── report/        fragility score + Markdown/JSON/HTML rendering
 ├── ui/            optional Streamlit app
@@ -28,23 +33,30 @@ econoclast/
 3. **Literature.** Build a query from the title + abstract, search the keyless sources (and any local
    corpus), rank by keyword overlap + citation count. Used to ground the referee and the
    literature-contradiction attack.
-4. **Attack.** Forensics run first (fast, offline, ordered). LLM attacks run **concurrently** in a
-   thread pool — the router is thread-safe and accumulates cost. Each attack is gated, and one
+4. **Attack.** The grounded LLM critiques (specification-search, cherry-picking, identification,
+   robustness-coverage, HARKing, over-claiming, literature-contradiction), a research-then-verify
+   methodology audit for methods the tool does not cover, and a citation-check against Crossref run
+   **concurrently** in a thread pool. The backend is thread-safe. Each attack is gated, and one
    attack failing never kills the run.
 5. **Synthesise.** A `fragility` score aggregates findings by `severity × confidence` (saturating,
-   with an integrity override). The referee model writes a meta-review: a one-line verdict, a
+   with an integrity override). The referee pass writes a meta-review: a one-line verdict, a
    specific assessment, and the single most decisive test that would change its mind.
 6. **Report.** Render to Markdown, JSON, and a self-contained HTML page.
 
 ## Design choices worth knowing
 
-- **Roles, not models.** Attacks request `extractor` / `attacker` / `referee`; the router picks the
-  model and falls back on failure. Cheap work goes to a cheap model.
-- **ReAct-style JSON, not native tool-calling.** The LLM layer uses a portable JSON contract so that
-  local Ollama models (which lack native function calling) behave exactly like frontier APIs.
+- **One backend, one model.** The only model setting is the backend: `backend: auto | claude | codex`
+  (or `--backend`), with an optional `model:` override and `backend_args` passed through to the CLI.
+  `econoclast backend` shows which agent it will drive. Attacks request a `role`
+  (`extractor` / `attacker` / `referee`) only so the backend can pick a temperature; there is a single
+  model behind every role. New code lives in `llm/backend.py` (the `Backend` class + `detect_backend`),
+  replacing the deleted `llm/router.py`.
 - **Grounding.** Every LLM finding must include a verbatim quote; ungrounded findings are capped at
   low confidence. This is the main defence against hallucinated problems.
-- **Graceful degradation.** No keys -> forensics-only report via the mock provider. A literature source
-  down -> it returns `[]` and the run continues.
-- **Reproducibility.** Deterministic forensics are pure functions of the extracted numbers; the same
-  paper yields the same battery every time.
+- **Integrity override.** The fragility score forces a high band on a high-confidence
+  reporting-inconsistency finding, so an internally contradictory reported number cannot hide behind
+  an otherwise calm verdict.
+- **Graceful degradation.** A literature source down -> it returns `[]` and the run continues. There is
+  no offline mode: if neither `claude` nor `codex` is on PATH, the run stops with a clear message.
+- **No CLI in tests.** Tests inject a fake backend (`tests/_fake.py`), so the suite never spawns
+  `claude` or `codex` and stays deterministic.

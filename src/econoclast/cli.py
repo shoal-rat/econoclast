@@ -45,13 +45,11 @@ def review(
     out: Path | None = typer.Option(None, "--out", "-o", help="Output directory for the report files."),
     fmt: str = typer.Option("all", "--format", "-f", help="md | json | html | all"),
     backend: str = typer.Option("auto", "--backend", "-b",
-                                help="LLM backend: auto | claude | codex | mock (claude/codex need no API key)."),
-    no_llm: bool = typer.Option(False, "--no-llm", help="Deterministic forensics only (no model calls)."),
+                                help="Which agent to use: auto | claude | codex (no API key needed)."),
     no_literature: bool = typer.Option(False, "--no-literature", help="Skip online literature retrieval."),
     no_blind: bool = typer.Option(False, "--no-blind", help="Don't blind author identity (not recommended)."),
     ensemble: int = typer.Option(1, "--ensemble", help="Run each LLM attack N times; keep findings that recur."),
     deep: bool = typer.Option(False, "--deep", help="Branch-and-merge: try several verification strategies for hard methods."),
-    offline: bool = typer.Option(False, "--offline", help="Force the offline mock model."),
     attacks: str | None = typer.Option(None, "--attacks", help="Comma-separated subset of attack names."),
     replicate: Path | None = typer.Option(None, "--replicate",
                                           help="Replication spec config (YAML) -> run a specification curve."),
@@ -60,8 +58,6 @@ def review(
 ) -> None:
     """Run the full adversarial review on a paper (local path or URL)."""
     setup_logging("DEBUG" if verbose else "INFO")
-    from econoclast.agent.harness import Econoclast
-    from econoclast.config import Settings, cli_routes
     from econoclast.ingest.fetch import is_url
 
     if not is_url(paper) and not Path(paper).exists():
@@ -70,25 +66,18 @@ def review(
     paper_stem = "paper" if is_url(paper) else Path(paper).stem
 
     names = [a.strip() for a in attacks.split(",")] if attacks else None
-    settings = Settings.load(str(config) if config else None)
-    if backend == "claude":
-        settings.routes = cli_routes("claude_cli")
-    elif backend == "codex":
-        settings.routes = cli_routes("codex_cli")
-    eco = Econoclast(settings=settings, force_mock=offline or backend == "mock")
-    workers = 3 if backend in ("claude", "codex") else 6
+    eco = _build(backend, config)
 
     with console.status("[bold]Reviewing…[/bold]", spinner="dots") as status:
         report = eco.review(
             paper,
             attack_names=names,
-            use_llm=not no_llm,
             use_literature=not no_literature,
             blind=not no_blind,
             ensemble=ensemble,
             deep=deep,
             replication_config=str(replicate) if replicate else None,
-            max_workers=workers,
+            max_workers=_WORKERS,
             progress=lambda m: status.update(f"[bold]Reviewing…[/bold] {m}"),
         )
 
@@ -104,7 +93,7 @@ def verify(
     data: Path | None = typer.Option(None, "--data", help="Local dataset (skip auto-download)."),
     out: Path | None = typer.Option(None, "--out", "-o"),
     fmt: str = typer.Option("all", "--format", "-f", help="md | json | html | all"),
-    backend: str = typer.Option("auto", "--backend", "-b", help="auto | claude | codex | mock"),
+    backend: str = typer.Option("auto", "--backend", "-b", help="auto | claude | codex"),
     no_literature: bool = typer.Option(False, "--no-literature"),
     no_blind: bool = typer.Option(False, "--no-blind"),
     deep: bool = typer.Option(False, "--deep", help="Branch-and-merge verification for hard methods."),
@@ -112,29 +101,21 @@ def verify(
     config: Path | None = typer.Option(None, "--config", "-c"),
     verbose: bool = typer.Option(False, "--verbose", "-v"),
 ) -> None:
-    """Autonomous end-to-end check: paper -> forensics + critique -> dataset -> specification curve."""
+    """Autonomous end-to-end check: paper -> critique -> dataset -> specification curve."""
     setup_logging("DEBUG" if verbose else "INFO")
-    from econoclast.agent.harness import Econoclast
-    from econoclast.config import Settings, cli_routes
     from econoclast.ingest.fetch import is_url
 
     if not is_url(paper) and not Path(paper).exists():
         console.print(f"[red]Not found:[/red] {paper}")
         raise typer.Exit(1)
 
-    settings = Settings.load(str(config) if config else None)
-    if backend == "claude":
-        settings.routes = cli_routes("claude_cli")
-    elif backend == "codex":
-        settings.routes = cli_routes("codex_cli")
-    eco = Econoclast(settings=settings, force_mock=backend == "mock")
-    workers = 3 if backend in ("claude", "codex") else 6
+    eco = _build(backend, config)
 
     with console.status("[bold]Verifying...[/bold]", spinner="dots") as status:
         report = eco.verify(
             paper, data=str(data) if data else None,
             use_literature=not no_literature, blind=not no_blind, deep=deep, allow_code=allow_code,
-            max_workers=workers,
+            max_workers=_WORKERS,
             progress=lambda m: status.update(f"[bold]Verifying...[/bold] {m}"),
         )
 
@@ -156,7 +137,6 @@ def batch(
     out: Path = typer.Option(Path("econoclast-batch"), "--out", "-o"),
     full: bool = typer.Option(False, "--verify", help="Use full verify (fetch data + replicate) per paper."),
     backend: str = typer.Option("auto", "--backend", "-b"),
-    no_llm: bool = typer.Option(False, "--no-llm"),
     config: Path | None = typer.Option(None, "--config", "-c"),
     verbose: bool = typer.Option(False, "--verbose", "-v"),
 ) -> None:
@@ -164,19 +144,13 @@ def batch(
     setup_logging("DEBUG" if verbose else "WARNING")
     import glob as _glob
 
-    from econoclast.agent.harness import Econoclast
-    from econoclast.config import Settings, cli_routes
-
     papers = _find_papers(path, _glob)
     if not papers:
         console.print(f"[red]No papers found at:[/red] {path}")
         raise typer.Exit(1)
     console.print(f"[bold]{len(papers)} papers[/bold] to review.\n")
 
-    settings = Settings.load(str(config) if config else None)
-    if backend in ("claude", "codex"):
-        settings.routes = cli_routes(f"{backend}_cli")
-    eco = Econoclast(settings=settings, force_mock=backend == "mock")
+    eco = _build(backend, config)
 
     rows = []
     out.mkdir(parents=True, exist_ok=True)
@@ -185,9 +159,9 @@ def batch(
         console.print(f"[dim]({i}/{len(papers)})[/dim] {stem}")
         try:
             if full:
-                report = eco.verify(str(pp), use_llm=not no_llm)
+                report = eco.verify(str(pp))
             else:
-                report = eco.review(str(pp), use_llm=not no_llm)
+                report = eco.review(str(pp))
             _write_report(report, out / stem, "all")
             frag = report.fragility
             rows.append({"paper": stem, "title": report.paper_title[:70],
@@ -208,33 +182,6 @@ def batch(
         table.add_row(str(r["fragility"]), r["band"], str(r["findings"]), r["paper"])
     console.print(table)
     console.print(f"\n[dim]Wrote per-paper reports and summary to[/dim] {out}/")
-
-
-@app.command()
-def forensics(
-    paper: str = typer.Argument(..., help="Path OR URL to the paper."),
-    verbose: bool = typer.Option(False, "--verbose", "-v"),
-) -> None:
-    """Run ONLY the deterministic statistical forensics (offline, no keys)."""
-    setup_logging("DEBUG" if verbose else "WARNING")
-    from econoclast.forensics import run_forensics
-    from econoclast.ingest.fetch import is_url
-    from econoclast.ingest.paper import load_paper
-
-    if not is_url(paper) and not Path(paper).exists():
-        console.print(f"[red]Not found:[/red] {paper}")
-        raise typer.Exit(1)
-
-    p = load_paper(paper)
-    console.print(f"[bold]{p.title}[/bold]  [dim]({len(p.claims)} claims extracted)[/dim]\n")
-    results = run_forensics(p)
-    table = Table(show_lines=False, header_style="bold")
-    for col in ("Test", "Verdict", "N", "Summary"):
-        table.add_column(col)
-    for r in results:
-        vstyle = {"suspicious": "bold red", "clean": "green", "inconclusive": "yellow"}.get(r.verdict, "dim")
-        table.add_row(r.name, Text(r.verdict, style=vstyle), str(r.n_inputs), r.summary)
-    console.print(table)
 
 
 @app.command()
@@ -272,20 +219,26 @@ def list_attacks() -> None:
 
 
 @app.command()
-def models(config: Path | None = typer.Option(None, "--config", "-c")) -> None:
-    """Show the configured model routing and which API keys are detected."""
+def backend(config: Path | None = typer.Option(None, "--config", "-c")) -> None:
+    """Show which agent backend Econoclast will use (Claude Code or Codex)."""
+    import shutil
+
     from econoclast.config import Settings
 
     s = Settings.load(str(config) if config else None)
-    table = Table(title="Model routing", header_style="bold")
-    for col in ("role", "provider:model", "usable"):
+    claude = shutil.which(s.claude_binary)
+    codex = shutil.which(s.codex_binary)
+    table = Table(title="Backend", header_style="bold")
+    for col in ("agent", "on PATH"):
         table.add_column(col)
-    for role in ("extractor", "attacker", "referee"):
-        for ref in s.models_for(role):
-            ok = "[green]yes[/green]" if ref.is_usable() else "[red]no key[/red]"
-            table.add_row(role, f"{ref.provider}:{ref.model}", ok)
+    table.add_row("Claude Code", "[green]yes[/green]" if claude else "[red]no[/red]")
+    table.add_row("Codex", "[green]yes[/green]" if codex else "[red]no[/red]")
     console.print(table)
-    console.print(f"\nLive models available: [bold]{'yes' if s.has_live_models() else 'no (mock only)'}[/bold]")
+    chosen = "none found" if not (claude or codex) else (
+        s.backend if s.backend in ("claude", "codex") else ("claude" if claude else "codex"))
+    console.print(f"\nPreference [bold]{s.backend}[/bold]; will use: [bold]{chosen}[/bold]")
+    if not (claude or codex):
+        console.print("[yellow]Install Claude Code or Codex (and log in) to run Econoclast.[/yellow]")
 
 
 @app.command()
@@ -369,7 +322,7 @@ def replicate(
 
 @app.command()
 def setup(
-    backend: str = typer.Option("auto", "--backend", "-b", help="auto | claude | codex | api | none"),
+    backend: str = typer.Option("auto", "--backend", "-b", help="auto | claude | codex"),
     no_blind: bool = typer.Option(False, "--no-blind", help="Don't blind author identity."),
     no_literature: bool = typer.Option(False, "--no-literature", help="Disable online literature retrieval."),
     corpus: Path | None = typer.Option(None, "--corpus", help="Folder of your own papers to ground reviews."),
@@ -382,9 +335,7 @@ def setup(
     from econoclast.setup_wizard import detect_environment, run_setup
 
     env = detect_environment()
-    keys = ", ".join(k for k, v in env["api_keys"].items() if v) or "none"
     console.print(Panel(
-        f"API keys: [bold]{keys}[/bold]\n"
         f"Claude Code CLI: [bold]{'yes' if env['claude'] else '—'}[/bold]   "
         f"Codex CLI: [bold]{'yes' if env['codex'] else '—'}[/bold]\n"
         f"Recommended backend: [bold]{env['recommended_backend']}[/bold]",
@@ -393,7 +344,7 @@ def setup(
     blind, literature = not no_blind, not no_literature
     interactive = not yes and sys.stdin.isatty()
     if interactive:
-        backend = typer.prompt("Backend (auto/claude/codex/api/none)",
+        backend = typer.prompt("Backend (auto/claude/codex)",
                                default=backend if backend != "auto" else env["recommended_backend"])
         blind = typer.confirm("Blind author identity during LLM review? (recommended)", default=True)
         literature = typer.confirm("Retrieve related literature online?", default=True)
@@ -453,6 +404,25 @@ def version() -> None:
 
 
 # --------------------------------------------------------------------------- #
+_WORKERS = 3  # the backend is a subprocess CLI; keep concurrency modest
+
+
+def _build(backend: str, config: Path | None):
+    """Construct an Econoclast, or exit cleanly if no agent backend is available."""
+    from econoclast.agent.harness import Econoclast
+    from econoclast.config import Settings
+    from econoclast.llm.base import LLMError
+
+    settings = Settings.load(str(config) if config else None)
+    if backend in ("claude", "codex"):
+        settings.backend = backend
+    try:
+        return Econoclast(settings=settings)
+    except LLMError as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(1) from None
+
+
 def _s(x) -> str:
     return "" if x is None else str(x)
 
@@ -538,10 +508,6 @@ def _print_summary(report) -> None:
         console.print(table)
     else:
         console.print("[green]No findings raised.[/green]")
-
-    susp = [r for r in report.forensic_results if r["verdict"] == "suspicious"]
-    if susp:
-        console.print("\n[bold]Forensic flags:[/bold] " + ", ".join(r["name"] for r in susp))
 
 
 if __name__ == "__main__":

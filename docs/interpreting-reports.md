@@ -17,32 +17,36 @@ A 0–100 number with a band:
 
 The score is the saturating sum of `severity × confidence` over all findings. It **saturates** so a
 few decisive findings dominate a pile of weak ones. An **integrity override** lifts the band whenever
-a deterministic test proves a number impossible or a p-value flips significance.
+a high-confidence reporting-inconsistency finding shows a reported number is internally impossible or
+inconsistent.
 
 ## What each signal does and does NOT mean
 
-- **statcheck / GRIM / GRIMMER inconsistency** -> a number is internally impossible or mismatched. This
-  is high-confidence *as arithmetic*, but the cause could be a typo, a rounding convention, or a
-  transcription error — **not necessarily fabrication.** It always warrants a correction.
-- **p-curve flat, caliper bunching, TIVA low variance** -> distributional signals of selective
-  reporting. They are **weak on small samples** and assume conditions (independent tests of one
-  hypothesis, local density smoothness) a single paper may violate. Capped at modest confidence and
-  printed with caveats. Treat as "look harder here," not proof.
-- **Benford / terminal-digit** -> exploratory only. Regression coefficients need not be Benford.
-- **LLM findings** (specification search, cherry-picking, identification, …) -> reasoning that *can be
-  wrong or over-confident.* Every one carries a verbatim quote so you can check it against the paper
-  in seconds. If the quote doesn't support the claim, discard it.
+Every finding is a grounded LLM judgment carrying a verbatim quote, so you can check it against the
+paper in seconds. If the quote doesn't support the claim, discard it.
+
+- **reporting-inconsistency** -> a reported number looks internally impossible or mismatched (a mean
+  outside its scale, a t-statistic that doesn't match its coefficient and standard error). The cause
+  could be a typo, a rounding convention, or a transcription error, **not necessarily fabrication.** It
+  always warrants a correction. A high-confidence one triggers the integrity override.
+- **specification-search, cherry-picking, identification, robustness-coverage, HARKing, over-claiming,
+  literature-contradiction** -> reasoning about the choices behind the result. This *can be wrong or
+  over-confident.* Read the quote and decide for yourself.
+- **methodology audit** -> for a method Econoclast does not cover, it researches the method's literature
+  first, then checks the paper against what that literature expects.
+- **citation-check** -> references resolved against Crossref. A low resolve rate is a flag to look
+  harder at the bibliography, not proof of a problem.
 
 ## Confidence
 
-Each finding's confidence reflects how sure the attack is that the problem is *real and material*.
-Deterministic impossibilities are ~0.9–0.95; statistical signals ~0.5–0.6; exploratory ~0.35;
-ungrounded LLM claims are auto-capped at 0.35.
+Each finding's confidence reflects how sure the attack is that the problem is *real and material*. A
+finding whose quote does not actually appear in the paper is treated as ungrounded and auto-capped at
+0.35. A referee pass writes the synthesis over the surviving findings.
 
 ## Good uses
 
 - Stress-test **your own** paper before submission.
-- Referee more thoroughly — generate a structured first pass, then verify each flag.
+- Referee more thoroughly: generate a structured first pass, then verify each flag.
 - Teach what robustness actually requires.
 
 ## Bad uses

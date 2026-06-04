@@ -74,8 +74,6 @@ class MethodologyAuditAttack(LLMAttack):
         )
 
     def run(self, ctx: AttackContext) -> list[Finding]:
-        if not ctx.llm_live:
-            return []
         if not ctx.deep:
             return super().run(ctx)
         # Deep mode: branch into several verification strategies and judge-merge.

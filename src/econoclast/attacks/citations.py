@@ -17,7 +17,7 @@ class CitationVerificationAttack(Attack):
     description = "Verify the paper's references resolve to real works in Crossref."
 
     def gate(self, ctx: AttackContext) -> bool:
-        return ctx.searcher is not None and not ctx.settings.offline
+        return ctx.searcher is not None
 
     def run(self, ctx: AttackContext) -> list[Finding]:
         refs = extract_references(ctx.paper)

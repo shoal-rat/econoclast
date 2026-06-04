@@ -1,12 +1,11 @@
 """Extract reported statistics from paper text and tables.
 
-This is the offline workhorse: with nothing but the PDF/LaTeX it recovers the
-numbers the forensic modules attack — test statistics + p-values (statcheck,
-p-curve, bunching), means + N (GRIM), coefficients + standard errors (implied
-t, p-curve), and reported sample sizes.
+With nothing but the PDF/LaTeX this recovers the numbers the critique reasons
+over: test statistics and p-values, means and N, coefficients and standard
+errors, and reported sample sizes.
 
 The regexes are intentionally conservative: a false negative (a missed stat) is
-cheaper than a false positive (a fabricated stat that pollutes the forensics).
+cheaper than a false positive (a fabricated stat).
 """
 
 from __future__ import annotations

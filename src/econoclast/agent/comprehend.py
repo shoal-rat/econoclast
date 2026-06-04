@@ -1,11 +1,11 @@
 """Let the model read the paper and decide the things we used to guess at.
 
 Detecting the design and the method by keyword works, but it is brittle and it
-cannot tell you what the headline claim actually is or where the data lives.
-When a model is available, this reads the paper once and returns a structured
-understanding that drives the rest of the run: which design and methods, the
-central claim and its direction, the variables, and any dataset link. Without a
-model the caller falls back to the regex detectors.
+cannot tell you what the headline claim actually is or where the data lives. This
+reads the paper once and returns a structured understanding that drives the rest
+of the run: which design and methods, the central claim and its direction, the
+variables, and any dataset link. Keyword detection still runs alongside as a
+floor (see ``merge_designs``).
 """
 
 from __future__ import annotations
@@ -30,18 +30,16 @@ _CONTRACT = (
 )
 
 
-def comprehend(paper, router) -> dict | None:  # noqa: ANN001
-    if not router.is_live():
-        return None
+def comprehend(paper, backend) -> dict | None:  # noqa: ANN001
     excerpt = (
         f"TITLE: {paper.title}\nABSTRACT: {paper.abstract[:1200]}\n\n"
         + paper.section_text("strateg", "identif", "method", "data", "result", "estimat", "availab")[:12000]
     ) or paper.excerpt(12000)
     try:
-        resp = router.complete("extractor",
-                               [Message(role="system", content=_SYSTEM + "\n\n" + _CONTRACT),
-                                Message(role="user", content=excerpt)],
-                               response_format="json")
+        resp = backend.complete("extractor",
+                                [Message(role="system", content=_SYSTEM + "\n\n" + _CONTRACT),
+                                 Message(role="user", content=excerpt)],
+                                response_format="json")
         data = resp.json()
     except Exception as exc:  # noqa: BLE001
         log.warning("comprehension failed, falling back to keyword detection: %s", exc)

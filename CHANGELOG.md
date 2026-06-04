@@ -5,6 +5,21 @@ All notable changes to Econoclast are documented here. Format follows
 
 ## [Unreleased]
 
+### Changed (native-LLM only: Claude Code or Codex)
+- Econoclast is now a pure native-LLM tool. Removed the deterministic forensics entirely (statcheck,
+  GRIM/GRIMMER, p-curve, caliper, TIVA, Benford, terminal-digit) and the whole offline path. The
+  verdict now comes from the grounded model critique, the research-then-verify pass, and the
+  specification-curve replication.
+- Removed the multi-model router and every API/local provider (OpenAI, Anthropic, Google, OpenRouter,
+  Ollama, LiteLLM) and the offline mock. The only backends are the Claude Code and Codex CLIs, driven
+  by subprocess with their own subscription auth. A new `llm/backend.py` replaces `llm/router.py`; if
+  neither CLI is on PATH, Econoclast stops with a clear message instead of degrading.
+- `config.py` lost model routing, API keys, and the `offline` flag; it now carries only the backend
+  choice (auto | claude | codex). Removed the `econoclast forensics` and `econoclast models` commands
+  (added `econoclast backend`), the `--offline` / `--no-llm` flags, and the `econoclast_forensics` MCP
+  tool. The report no longer has a forensic battery; the fragility integrity override now keys off a
+  high-confidence reporting-inconsistency finding. Tests inject a fake backend; nothing spawns a CLI.
+
 ### Added (talk once, let the AI decide)
 - Interaction redesign for non-technical users: intake now returns a one-line `plan` and a single
   `blocking_question` so the agent states what it will do and proceeds, instead of opening a question
@@ -66,7 +81,7 @@ All notable changes to Econoclast are documented here. Format follows
   curve / multiverse analysis that re-estimates the headline coefficient across every defensible
   combination of controls × fixed effects × clustering × sample and reports the share that survive;
   RDD manipulation + bandwidth-sensitivity and DiD pre-trend screening checks; spec-curve plot; folds
-  into `review` via `--replicate`. Re-estimated in-process (statsmodels) — never runs author code.
+  into `review` via `--replicate`. Re-estimated in-process (statsmodels) - never runs author code.
 - **No-API-key backends**: drive Claude Code (`--backend claude`) or Codex (`--backend codex`) via
   subprocess; auto-detected when no API key is set.
 - **MCP server** (`econoclast mcp`) exposing `econoclast_forensics` / `econoclast_review` /
@@ -74,11 +89,11 @@ All notable changes to Econoclast are documented here. Format follows
   marketplace) and Codex prompts, incl. an agent-driven `/econoclast-setup`.
 - **`econoclast setup`** wizard: detect backends, write config, and register the MCP tool.
 - **URL ingestion**: `review` / `forensics` / MCP accept a local path **or** a URL (PDF, arXiv
-  abstract page, or a journal/landing webpage — downloaded automatically).
+  abstract page, or a journal/landing webpage - downloaded automatically).
 - **Credibility controls**: mechanical quote-grounding gate, identity-blind review (default on),
   prompt-injection detection/stripping. See `docs/credibility.md`.
 
-## [0.1.0] — 2026-06-04
+## [0.1.0] - 2026-06-04
 
 First public release.
 
@@ -87,12 +102,12 @@ First public release.
   plain-text loaders; section segmentation; conservative regex harvest of statistical claims
   (coefficients, standard errors, t/F/r/z/χ² statistics, p-values, means/SDs, stars, N).
 - **Deterministic forensics:** statcheck, GRIM, GRIMMER, p-curve, caliper/z-bunching, TIVA + R-index,
-  Benford, terminal-digit — all offline, all unit-tested.
+  Benford, terminal-digit - all offline, all unit-tested.
 - **Multi-model LLM layer:** provider-agnostic router with fallbacks and cost accounting; OpenAI-
   compatible, Anthropic, Google Gemini, Ollama/local, and LiteLLM passthrough providers; an offline
   mock provider.
 - **LLM attacks:** specification-search, cherry-picking, identification-critique (design-gated),
-  robustness-coverage, HARKing, over-claiming, literature-contradiction — all quote-grounded.
+  robustness-coverage, HARKing, over-claiming, literature-contradiction - all quote-grounded.
 - **Literature:** keyless OpenAlex / Semantic Scholar / arXiv / Crossref search + local corpus + keyword ranking.
 - **Agent & report:** bounded orchestration, referee meta-review synthesis, saturating fragility score
   with an integrity override, and Markdown / JSON / HTML rendering.

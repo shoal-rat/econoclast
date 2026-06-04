@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 
-from econoclast.config import ModelRef
 from econoclast.ingest.sanitize import (
     blind_identities,
     detect_injection,
@@ -12,7 +11,7 @@ from econoclast.ingest.sanitize import (
     quote_supported,
     strip_invisibles,
 )
-from econoclast.llm.providers.cli import _parse_claude
+from econoclast.llm.providers.cli import ClaudeCodeProvider, CodexProvider, _parse_claude
 
 
 def test_parse_claude_envelope():
@@ -41,10 +40,10 @@ def test_parse_claude_error_raises():
         _parse_claude(env, "sonnet", "claude_cli")
 
 
-def test_cli_provider_usability():
-    # A bogus binary is not usable; a real one (python) is.
-    assert ModelRef("claude_cli", "sonnet", binary="definitely-not-real-xyz123").is_usable() is False
-    assert ModelRef("codex_cli", "", binary="python").is_usable() is True
+def test_cli_provider_availability():
+    # A bogus binary is not available; a real one (python) is.
+    assert ClaudeCodeProvider(binary="definitely-not-real-xyz123").available() is False
+    assert CodexProvider(binary="python").available() is True
 
 
 # ----------------------------------------------------------------- sanitize
@@ -94,7 +93,7 @@ def test_setup_detect_and_build_config():
     from econoclast.setup_wizard import build_config, detect_environment
 
     env = detect_environment()
-    assert set(env) >= {"api_keys", "claude", "codex", "recommended_backend"}
+    assert set(env) >= {"claude", "codex", "recommended_backend"}
     cfg = build_config("claude", blind=True, literature=False, corpus=None)
-    assert "models" in cfg and "attacker" in cfg["models"]
+    assert cfg["backend"] == "claude"
     assert cfg["literature"]["enabled"] is False

@@ -20,8 +20,8 @@ The user said: `$ARGUMENTS`
    econoclast verify "<paper link or path>"      # add --data <path> if they have the dataset
    ```
    If `econoclast` is missing, install it first: `pip install "econoclast[all] @ git+https://github.com/shoal-rat/econoclast"`.
-   This runs the statistical forensics, the adversarial critique, a research-then-verify pass for any
-   method it does not cover, and (when it can find the data) a specification curve.
+   This runs the grounded adversarial critique, a research-then-verify pass for any method it does not
+   cover, a citation-check against Crossref, and (when it can find the data) a specification curve.
 
 3. Explain the result in plain language. Lead with the fragility score in one sentence. For each
    serious finding, say what it means and why it matters, and quote the paper. Offer the full report.

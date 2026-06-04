@@ -1,6 +1,6 @@
 {
   "name": "econoclast",
-  "description": "Adversarial referee for empirical-economics papers: deterministic statistical forensics + grounded critique.",
+  "description": "Native-LLM adversarial referee for empirical-economics papers: grounded critique, methodology audit, citation-check, and specification-curve replication.",
   "version": "0.1.0",
   "author": { "name": "shoal-rat" },
   "homepage": "https://github.com/shoal-rat/econoclast"

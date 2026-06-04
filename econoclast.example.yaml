@@ -1,32 +1,16 @@
-# Econoclast configuration — copy to `econoclast.yaml` and edit.
-# Everything here is optional. With no config and no keys, the deterministic
-# forensics still run offline. API keys come from the environment (.env), never
-# from this file.
+# Econoclast configuration. Copy to `econoclast.yaml` and edit.
+# Everything here is optional. Econoclast runs on Claude Code or Codex; there are
+# no API keys and no offline mode.
 
 # ---------------------------------------------------------------------------
-# Model routing. Each attack asks for a ROLE; the router resolves it to a model
-# (with fallbacks). Use "provider:model" shorthand or a full {provider, model}.
-# Providers: openai · anthropic · google · openrouter · ollama · litellm · mock
+# Backend. Econoclast drives the `claude` or `codex` CLI as a subprocess, using
+# that CLI's own subscription auth. "auto" tries Claude Code first, then Codex.
 # ---------------------------------------------------------------------------
-models:
-  extractor: anthropic:claude-haiku-4-5-20251001      # cheap/fast: light extraction
-  attacker:                                            # strong reasoning, with fallback
-    - anthropic:claude-opus-4-8
-    - openai:gpt-4o
-  referee: anthropic:claude-opus-4-8                   # final meta-review
-
-  # Local model with no API key:
-  # attacker: { provider: ollama, model: "llama3.1:70b" }
-  #
-  # Any of LiteLLM's 100+ providers:
-  # attacker: { provider: litellm, model: "gemini/gemini-1.5-pro" }
-  #
-  # A custom OpenAI-compatible endpoint (vLLM, Together, Groq, LM Studio):
-  # attacker: { provider: openai, model: "my-model", base_url: "http://localhost:8000/v1" }
-
-# Optional per-model price overrides (USD per 1M tokens: [input, output]).
-# pricing:
-#   "claude-opus-4-8": [15.0, 75.0]
+backend: auto                 # auto | claude | codex
+# model: ""                   # optional model override passed to the CLI ("" = its default)
+# claude_binary: claude       # path/name of the Claude Code CLI
+# codex_binary: codex         # path/name of the Codex CLI
+# backend_args: []            # extra args appended to every CLI call
 
 # ---------------------------------------------------------------------------
 # Literature retrieval (used by the literature-contradiction attack and to give
@@ -41,7 +25,7 @@ literature:
 # ---------------------------------------------------------------------------
 # Misc
 # ---------------------------------------------------------------------------
-offline: false              # true = force the mock model (forensics only)
-request_timeout: 120        # seconds per LLM call
+blind_default: true           # blind author identity during review (anti prestige-bias)
+request_timeout: 240          # seconds per backend call
 cache_dir: .econoclast_cache
-contact_email: ""           # optional: a polite-pool e-mail raises OpenAlex/Crossref limits
+contact_email: ""             # optional: a polite-pool e-mail raises OpenAlex/Crossref limits

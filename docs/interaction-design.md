@@ -2,7 +2,7 @@
 
 This is the product view of how a person actually uses Econoclast, what got in their way, and how the
 flow was simplified. The user we design for is an economist who is not technical. They do not want to
-run a forensics suite; they want to know whether they can trust a paper's headline result, in language
+run a review suite; they want to know whether they can trust a paper's headline result, in language
 they understand, with as little work from them as possible. Everything below works backward from that
 one sentence.
 
@@ -18,7 +18,7 @@ sequenceDiagram
     actor User
     participant CLI
     participant Eng as Econoclast
-    participant LLM as Model
+    participant LLM as Backend (claude/codex CLI)
     participant Web
 
     User->>CLI: econoclast verify <URL>
@@ -26,17 +26,15 @@ sequenceDiagram
     CLI->>+Eng: verify(paper, data?, deep?)
     Eng->>Web: fetch the paper
     Web-->>Eng: paper file
-    opt model available
-        Eng->>LLM: read the paper (design, claim, data links)
-        LLM-->>Eng: structured comprehension
-    end
+    Eng->>LLM: read the paper (design, claim, data links)
+    LLM-->>Eng: structured comprehension
     opt no --data given
         Eng->>Web: find and download the dataset
         Web-->>Eng: data files, or none
     end
-    Eng->>Eng: forensics (statcheck, GRIM, p-curve, ...)
-    Eng->>LLM: critique + research uncovered methods
+    Eng->>LLM: grounded critique + research uncovered methods
     LLM-->>Eng: findings, each grounded in a quote
+    Eng->>Web: citation-check against Crossref
     opt dataset found and mappable
         Eng->>Eng: specification curve on the data
     end
@@ -53,7 +51,7 @@ sequenceDiagram
     actor User
     participant Agent as Host agent
     participant Eco as Econoclast (MCP)
-    participant LLM as Model
+    participant LLM as Backend (claude/codex CLI)
     participant Web
 
     User->>Agent: "check this paper for me <link>"
@@ -67,7 +65,7 @@ sequenceDiagram
     end
     Agent->>+Eco: econoclast_verify(paper, data?)
     Eco->>Web: fetch the paper, find and download the data
-    Eco->>LLM: forensics + critique + research + spec curve
+    Eco->>LLM: critique + research + citation-check + spec curve
     Note over Eco: one long call, no progress sent back
     Eco-->>-Agent: full report
     Agent->>User: plain-language verdict + offer the report
@@ -83,9 +81,9 @@ Reading the two traces against the usability literature, the friction clustered 
    user does not need to spend (Hick's Law) and a gap between their intent and the action that satisfies
    it (Norman's gulf of execution).
 
-2. **The long run was a black box.** `verify` fetches the paper, downloads data, runs the forensics,
-   the model critique, the method research, and a full specification curve, then returns once. A
-   non-technical user saw a blank pause with no sense of what was happening or how long was left.
+2. **The long run was a black box.** `verify` fetches the paper, downloads data, runs the grounded
+   critique, the method research, the citation-check, and a full specification curve, then returns once.
+   A non-technical user saw a blank pause with no sense of what was happening or how long was left.
    Nielsen-Norman's first heuristic, visibility of system status, says anything past ten seconds needs a
    determinate signal, not a spinner.
 
@@ -112,9 +110,9 @@ changes, each tied to the friction above.
   the long call, so the pause is expected rather than read as a stall. This narrows the gulf of
   execution and lowers the perceived wait.
 - **Graceful degradation, stated plainly.** When the data is not public, that is not an error. The tool
-  returns the full text-based verdict (forensics and critique) and says, in plain words, that it could
-  not re-run the data, then offers to add the re-run if the user can share the file. Nothing completed
-  is thrown away (Nielsen-Norman heuristic nine).
+  returns the full text-based verdict (the grounded critique, the methodology audit, and the
+  citation-check) and says, in plain words, that it could not re-run the data, then offers to add the
+  re-run if the user can share the file. Nothing completed is thrown away (Nielsen-Norman heuristic nine).
 - **Refine without restart.** After the verdict, follow-ups like "show me the full report" or "what
   about Table 4" are answered from the report already in hand. Only genuinely new input, a dataset file
   or a different claim, triggers a fresh run, and the agent says what changed.
@@ -128,5 +126,5 @@ changes, each tied to the friction above.
 The diagram is deliberately the happy path plus the branches that matter to the user: the data-found
 versus no-data split (graceful degradation), and the refine loop. The one question, asked only when the
 paper is missing, stays out of the common case.
-Everything else (backend selection, design gating, grounding, the forensic battery) is detail the
+Everything else (backend selection, design gating, grounding, the citation-check) is detail the
 non-technical user should never have to see, and it stays in the engine.

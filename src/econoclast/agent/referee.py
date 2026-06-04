@@ -1,9 +1,8 @@
 """Final referee synthesis: turn a pile of findings into a verdict.
 
-With a live model this is a STORM/perform_review-style meta-review: the model
-sees the structured findings + forensic battery and writes an executive
-assessment. Without a model it falls back to a deterministic summary so the
-report is always coherent.
+The model sees the structured findings and writes an executive assessment, like an
+area chair's meta-review. If the model call fails outright, a terse deterministic
+summary keeps the report coherent.
 """
 
 from __future__ import annotations
@@ -19,11 +18,11 @@ log = get_logger("agent.referee")
 
 _SYSTEM = (
     "You are the area chair writing the meta-review for an adversarial referee report on an "
-    "empirical economics paper. You are given structured findings and a deterministic forensic "
-    "battery. Weigh them honestly: do not inflate weak statistical signals, but do not excuse "
-    "internal inconsistencies. Trust grounded, verified findings (those with a quote or a recomputed "
-    "number) over speculative ones, and discount any finding flagged as unverified. Decide whether the "
-    "central empirical claim is robust, has material concerns, or is fragile."
+    "empirical economics paper. You are given the structured findings. Weigh them honestly: do not "
+    "inflate weak statistical signals, but do not excuse internal inconsistencies. Trust grounded, "
+    "verified findings (those with a quote) over speculative ones, and discount any finding flagged as "
+    "unverified. Decide whether the central empirical claim is robust, has material concerns, or is "
+    "fragile."
 )
 
 _CONTRACT = (
@@ -37,28 +36,19 @@ _CONTRACT = (
 def synthesize_referee(
     ctx: AttackContext, findings: list[Finding], fragility: dict
 ) -> dict:
-    if not ctx.llm_live:
-        return _fallback(ctx, findings, fragility)
-
     top = [f.to_dict() for f in sorted(findings, key=lambda f: f.weight, reverse=True)[:12]]
-    forensic_flags = [
-        {"name": r["name"], "verdict": r["verdict"], "summary": r["summary"]}
-        for r in ctx.forensic_results
-        if r["verdict"] == "suspicious"
-    ]
     payload = {
         "title": ctx.paper.title,
         "design": design_label(ctx.designs),
         "fragility": fragility,
         "top_findings": top,
-        "forensic_flags": forensic_flags,
     }
     messages = [
         Message(role="system", content=_SYSTEM + "\n\n" + _CONTRACT),
         Message(role="user", content="Here is the evidence:\n" + json.dumps(payload, ensure_ascii=False)[:14000]),
     ]
     try:
-        resp = ctx.router.complete("referee", messages, response_format="json")
+        resp = ctx.backend.complete("referee", messages, response_format="json")
         data = resp.json()
         if isinstance(data, dict) and data.get("headline"):
             return {
@@ -80,7 +70,7 @@ def _fallback(ctx: AttackContext, findings: list[Finding], fragility: dict) -> d
         bullets = "; ".join(f"{f.title} ({f.severity})" for f in top)
         assessment = f"The most consequential issues: {bullets}."
     else:
-        assessment = "No material findings were raised; the deterministic battery found nothing impossible."
+        assessment = "No material findings were raised."
     if fragility.get("integrity_violation"):
         assessment += " A reported statistic is internally impossible or inconsistent, which by itself warrants correction."
     return {

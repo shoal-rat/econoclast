@@ -4,11 +4,12 @@ The goal: a user runs one command (or an agent runs it for them after a couple o
 questions), and afterwards they can just hand Econoclast a path or a URL. This
 writes ``econoclast.yaml`` and, optionally, registers the MCP server with Claude
 Code / Codex so the agent can call Econoclast as a tool.
+
+Econoclast runs on Claude Code or Codex; there are no API keys to configure.
 """
 
 from __future__ import annotations
 
-import os
 import shutil
 import subprocess
 from pathlib import Path
@@ -19,51 +20,24 @@ from econoclast.logging import get_logger
 
 log = get_logger("setup")
 
-_API_KEYS = {
-    "anthropic": "ANTHROPIC_API_KEY",
-    "openai": "OPENAI_API_KEY",
-    "google": "GOOGLE_API_KEY",
-    "openrouter": "OPENROUTER_API_KEY",
-}
-
 
 def detect_environment() -> dict:
-    keys = {name: bool(os.getenv(env)) for name, env in _API_KEYS.items()}
     claude = shutil.which("claude") is not None
     codex = shutil.which("codex") is not None
-    if any(keys.values()):
-        recommended = "api"
-    elif claude:
-        recommended = "claude"
-    elif codex:
-        recommended = "codex"
-    else:
-        recommended = "none"
-    return {"api_keys": keys, "claude": claude, "codex": codex, "recommended_backend": recommended}
+    recommended = "claude" if claude else ("codex" if codex else "none")
+    return {"claude": claude, "codex": codex, "recommended_backend": recommended}
 
 
 def build_config(backend: str, *, blind: bool, literature: bool, corpus: str | None) -> dict:
-    from econoclast.config import cli_routes
-
     cfg: dict = {}
-    if backend == "claude":
-        cfg["models"] = _routes_to_yaml(cli_routes("claude_cli"))
-    elif backend == "codex":
-        cfg["models"] = _routes_to_yaml(cli_routes("codex_cli"))
-    # backend "api"/"none": leave models unset so auto-detection picks.
+    if backend in ("claude", "codex"):
+        cfg["backend"] = backend
+    # backend "auto"/"none": leave it unset so detection picks at run time.
     cfg["literature"] = {"enabled": literature}
     if corpus:
         cfg["literature"]["local_dirs"] = [str(corpus)]
     cfg["blind_default"] = blind
     return cfg
-
-
-def _routes_to_yaml(routes: dict) -> dict:
-    out = {}
-    for role, refs in routes.items():
-        vals = [(r.provider if not r.model else f"{r.provider}:{r.model}") for r in refs]
-        out[role] = vals if len(vals) > 1 else vals[0]
-    return out
 
 
 def run_setup(
@@ -129,10 +103,10 @@ def _install_codex_mcp() -> str:
 def _next_steps(backend: str, env: dict, mcp: bool) -> list[str]:
     steps = []
     if backend == "none":
-        steps.append("No LLM backend found — deterministic forensics still work. Install Claude Code "
-                     "or Codex, or set an API key, then re-run `econoclast setup`.")
+        steps.append("No agent backend found. Econoclast runs on Claude Code or Codex: install one "
+                     "(and log in), then re-run `econoclast setup`.")
+        return steps
     if mcp and (env["claude"] or env["codex"]):
-        steps.append("Restart your agent, then just say: \"use econoclast to review <path or URL>\".")
-    steps.append("Try it now: econoclast review examples/demo_paper.txt"
-                 + ("" if backend in ("api", "claude", "codex") else " --no-llm"))
+        steps.append("Restart your agent, then just say: \"use econoclast to verify <path or URL>\".")
+    steps.append("Try it now: econoclast verify examples/demo_paper.txt")
     return steps

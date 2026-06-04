@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 460" width="1200" height="460" font-family="Segoe UI, Helvetica, Arial, sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 470" width="1200" height="470" font-family="Segoe UI, Helvetica, Arial, sans-serif">
   <defs>
     <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
       <path d="M0,0 L8,3 L0,6 Z" fill="#94a3b8"/>
@@ -7,11 +7,11 @@
       .card { fill:#ffffff; stroke:#cbd5e1; stroke-width:1.5; }
       .h { font-size:18px; font-weight:700; fill:#0f172a; }
       .t { font-size:14px; fill:#475569; }
-      .lane { font-size:12px; fill:#64748b; }
+      .foot { font-size:13px; fill:#64748b; }
       .edge { stroke:#94a3b8; stroke-width:2; fill:none; }
     </style>
   </defs>
-  <rect width="1200" height="460" fill="#f8fafc" rx="14"/>
+  <rect width="1200" height="470" fill="#f8fafc" rx="14"/>
 
   <!-- input -->
   <rect class="card" x="30" y="180" width="180" height="96" rx="12"/>
@@ -20,36 +20,36 @@
   <text class="t" x="50" y="247">PDF / LaTeX / text,</text>
   <text class="t" x="50" y="265">arXiv or webpage</text>
 
-  <!-- ingest -->
+  <!-- read -->
   <rect class="card" x="270" y="180" width="200" height="96" rx="12"/>
   <rect x="270" y="180" width="200" height="8" rx="4" fill="#0f172a"/>
-  <text class="h" x="290" y="222">Ingest</text>
-  <text class="t" x="290" y="247">extract reported stats;</text>
-  <text class="t" x="290" y="265">detect design (DiD/RDD/IV)</text>
+  <text class="h" x="290" y="222">Read it</text>
+  <text class="t" x="290" y="247">design, claim, variables;</text>
+  <text class="t" x="290" y="265">find the dataset link</text>
 
   <!-- three lanes -->
   <rect class="card" x="540" y="40" width="320" height="92" rx="12"/>
   <rect x="540" y="40" width="320" height="8" rx="4" fill="#0ea5e9"/>
-  <text class="h" x="562" y="82">Forensics — offline, no key</text>
-  <text class="t" x="562" y="106">statcheck · GRIM/GRIMMER · p-curve ·</text>
-  <text class="t" x="562" y="123">caliper · TIVA · Benford · terminal-digit</text>
+  <text class="h" x="562" y="82">Research the method</text>
+  <text class="t" x="562" y="106">for one it does not cover: retrieve</text>
+  <text class="t" x="562" y="123">the assumptions, then verify</text>
 
   <rect class="card" x="540" y="184" width="320" height="92" rx="12"/>
   <rect x="540" y="184" width="320" height="8" rx="4" fill="#8b5cf6"/>
-  <text class="h" x="562" y="226">Critique — grounded LLM</text>
+  <text class="h" x="562" y="226">Critique: grounded LLM</text>
   <text class="t" x="562" y="250">specification search · cherry-picking ·</text>
   <text class="t" x="562" y="267">identification · robustness · HARKing</text>
 
   <rect class="card" x="540" y="328" width="320" height="92" rx="12"/>
   <rect x="540" y="328" width="320" height="8" rx="4" fill="#f59e0b"/>
-  <text class="h" x="562" y="370">Replicate — with the data</text>
-  <text class="t" x="562" y="394">find &amp; download the dataset;</text>
+  <text class="h" x="562" y="370">Replicate: with the data</text>
+  <text class="t" x="562" y="394">find and download the dataset;</text>
   <text class="t" x="562" y="411">run the specification curve</text>
 
   <!-- output -->
   <rect class="card" x="930" y="180" width="240" height="96" rx="12"/>
   <rect x="930" y="180" width="240" height="8" rx="4" fill="#ef4444"/>
-  <text class="h" x="952" y="222">Fragility 0–100</text>
+  <text class="h" x="952" y="222">Fragility 0-100</text>
   <text class="t" x="952" y="247">referee verdict + findings,</text>
   <text class="t" x="952" y="265">as md / json / html</text>
 
@@ -61,4 +61,6 @@
   <path class="edge" d="M860,90 C895,120 895,170 926,210" marker-end="url(#arrow)"/>
   <path class="edge" d="M860,230 L926,228" marker-end="url(#arrow)"/>
   <path class="edge" d="M860,372 C895,350 895,300 926,250" marker-end="url(#arrow)"/>
+
+  <text class="foot" x="600" y="452" text-anchor="middle">Every step runs on Claude Code or Codex. No API key, no offline mode.</text>
 </svg>

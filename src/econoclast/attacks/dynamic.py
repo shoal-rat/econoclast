@@ -45,8 +45,6 @@ class DynamicCheckAttack(Attack):
                     and method_coverage(ctx.methods)["needs_research"])
 
     def run(self, ctx: AttackContext) -> list[Finding]:
-        if not ctx.llm_live:
-            return []
         method = method_coverage(ctx.methods)["needs_research"][0]
         cols = _columns(ctx.data_path)
         system = (
@@ -62,8 +60,8 @@ class DynamicCheckAttack(Attack):
             'It must print exactly one JSON object: {"check": str, "statistic": number|null, '
             '"p_value": number|null, "concern": bool, "explanation": str}. Output ONLY the Python code.')
         try:
-            resp = ctx.router.complete("attacker",
-                                       [Message(role="system", content=system), Message(role="user", content=user)])
+            resp = ctx.backend.complete("attacker",
+                                        [Message(role="system", content=system), Message(role="user", content=user)])
             code = _extract_code(resp.text)
         except Exception as exc:  # noqa: BLE001
             log.warning("dynamic-check codegen failed: %s", exc)

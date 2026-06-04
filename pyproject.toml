@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "econoclast"
 version = "0.1.0"
-description = "A multi-model AI agent that red-teams empirical-economics papers for p-hacking, cherry-picking, and specification search."
+description = "A native-LLM agent (Claude Code / Codex) that red-teams empirical-economics papers for p-hacking, cherry-picking, and specification search."
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
@@ -14,7 +14,7 @@ maintainers = [{ name = "shoal-rat" }]
 keywords = [
     "economics", "econometrics", "p-hacking", "research-integrity",
     "peer-review", "llm", "agent", "specification-curve", "replication",
-    "statcheck", "meta-science",
+    "claude-code", "codex", "meta-science",
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -31,10 +31,7 @@ dependencies = [
     "typer>=0.12",
     "rich>=13.7",
     "pyyaml>=6.0",
-    "numpy>=1.24",
-    "scipy>=1.10",
     "pypdf>=4.2",
-    "tenacity>=8.2",
     "python-dotenv>=1.0",
     "jinja2>=3.1",
 ]
@@ -45,13 +42,13 @@ dependencies = [
 pdf = ["pymupdf>=1.24"]
 ui = ["streamlit>=1.36"]
 embeddings = ["sentence-transformers>=2.7"]
-litellm = ["litellm>=1.40"]
 mcp = ["mcp>=1.2"]
-replication = ["pandas>=2.0", "statsmodels>=0.14", "matplotlib>=3.7"]
-dev = ["pytest>=8.0", "pytest-cov>=5.0", "ruff>=0.5", "mypy>=1.10", "pandas>=2.0", "statsmodels>=0.14"]
+replication = ["pandas>=2.0", "statsmodels>=0.14", "matplotlib>=3.7", "numpy>=1.24", "scipy>=1.10"]
+dev = ["pytest>=8.0", "pytest-cov>=5.0", "ruff>=0.5", "mypy>=1.10",
+       "pandas>=2.0", "statsmodels>=0.14", "numpy>=1.24", "scipy>=1.10"]
 all = [
-    "pymupdf>=1.24", "streamlit>=1.36", "sentence-transformers>=2.7", "litellm>=1.40",
-    "mcp>=1.2", "pandas>=2.0", "statsmodels>=0.14", "matplotlib>=3.7",
+    "pymupdf>=1.24", "streamlit>=1.36", "sentence-transformers>=2.7",
+    "mcp>=1.2", "pandas>=2.0", "statsmodels>=0.14", "matplotlib>=3.7", "numpy>=1.24", "scipy>=1.10",
 ]
 
 [project.urls]

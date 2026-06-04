@@ -1,6 +1,6 @@
 """Replication mode: re-estimate the result across a multiverse of specifications.
 
-Unlike the PDF-only forensics, this needs the dataset. Given a `SpecConfig`
+Unlike the text-only critique, this needs the dataset. Given a `SpecConfig`
 (which the agent fills in after reading the paper + the data columns), it runs a
 specification-curve / multiverse analysis and, when relevant, RDD manipulation
 and DiD pre-trend checks — then turns the result into `Finding`s.
