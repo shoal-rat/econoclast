@@ -91,6 +91,11 @@ class AttackContext:
     run_dir: Path | None = None
     blind: bool = True  # blind author identity to LLM attacks (anti prestige-bias)
     ensemble: int = 1  # run each LLM attack N times and keep findings that recur
+    deep: bool = False  # branch-and-merge: try several verification strategies and merge
+    allow_code: bool = False  # let the agent write+run analysis code for uncovered methods
+    methods: set[str] = field(default_factory=set)  # detected estimation methods
+    methodology: dict[str, str] = field(default_factory=dict)  # retrieved method references
+    data_path: str | None = None  # dataset, when available (enables dynamic checks)
     notes: dict[str, Any] = field(default_factory=dict)
 
     @property

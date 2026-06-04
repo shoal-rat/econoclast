@@ -21,8 +21,9 @@ _SYSTEM = (
     "You are the area chair writing the meta-review for an adversarial referee report on an "
     "empirical economics paper. You are given structured findings and a deterministic forensic "
     "battery. Weigh them honestly: do not inflate weak statistical signals, but do not excuse "
-    "internal inconsistencies. Decide whether the central empirical claim is robust, has "
-    "material concerns, or is fragile."
+    "internal inconsistencies. Trust grounded, verified findings (those with a quote or a recomputed "
+    "number) over speculative ones, and discount any finding flagged as unverified. Decide whether the "
+    "central empirical claim is robust, has material concerns, or is fragile."
 )
 
 _CONTRACT = (

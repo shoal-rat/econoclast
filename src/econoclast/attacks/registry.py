@@ -4,12 +4,17 @@ from __future__ import annotations
 
 from econoclast.attacks.base import Attack
 from econoclast.attacks.citations import CitationVerificationAttack
+from econoclast.attacks.dynamic import DynamicCheckAttack
 from econoclast.attacks.forensic import build_forensic_attacks
 from econoclast.attacks.llm import build_llm_attacks
+from econoclast.attacks.methodology import MethodologyAuditAttack
 
 
 def all_attacks() -> list[Attack]:
-    return build_forensic_attacks() + [CitationVerificationAttack()] + build_llm_attacks()
+    return (build_forensic_attacks()
+            + [CitationVerificationAttack()]
+            + build_llm_attacks()
+            + [MethodologyAuditAttack(), DynamicCheckAttack()])
 
 
 def attacks_by_name() -> dict[str, Attack]:

@@ -53,6 +53,47 @@ def detect_designs(text: str) -> set[str]:
     return found
 
 
+# Finer-grained estimation methods, beyond the broad design family above. Many of
+# these have no built-in deterministic check, which is the point: when Econoclast
+# meets one it does not cover, the agent should research it and verify, not guess.
+_METHOD_PATTERNS: dict[str, list[str]] = {
+    "synthetic_control": [r"synthetic control"],
+    "bunching": [r"\bbunching\b", r"excess mass", r"\bnotch(es)?\b"],
+    "event_study": [r"event[- ]stud(y|ies)", r"event[- ]time"],
+    "shift_share": [r"shift[- ]share", r"\bBartik\b"],
+    "regression_kink": [r"regression kink", r"\bRKD\b"],
+    "gmm": [r"\bGMM\b", r"generalized method of moments", r"generalised method of moments"],
+    "ml_causal": [r"double machine learning", r"\bDML\b", r"causal forest", r"\blasso\b",
+                  r"post[- ]double", r"debiased machine learning"],
+    "structural": [r"\bBLP\b", r"nested logit", r"random coefficients", r"structural (model|estimation)",
+                   r"demand estimation"],
+    "did": [r"difference[- ]in[- ]differences", r"\bDiD\b", r"two[- ]way fixed effects", r"\bTWFE\b"],
+    "rdd": [r"regression discontinuity", r"\bRDD?\b", r"running variable", r"McCrary"],
+    "iv": [r"instrumental variabl", r"\b2SLS\b", r"exclusion restriction"],
+    "matching": [r"propensity score", r"\bmatching\b", r"synthetic control"],
+}
+
+# Methods Econoclast covers with a built-in deterministic estimator/diagnostic.
+# Anything not here triggers the research-then-verify path.
+COVERED_METHODS = {"rdd", "did"}
+
+
+def detect_methods(text: str) -> set[str]:
+    found = set()
+    for method, pats in _METHOD_PATTERNS.items():
+        if any(re.search(p, text, re.IGNORECASE) for p in pats):
+            found.add(method)
+    return found
+
+
+def method_coverage(methods: set[str]) -> dict[str, list[str]]:
+    """Split detected methods into ones we check deterministically vs ones to research."""
+    return {
+        "covered": sorted(m for m in methods if m in COVERED_METHODS),
+        "needs_research": sorted(m for m in methods if m not in COVERED_METHODS),
+    }
+
+
 def design_label(designs: set[str]) -> str:
     names = {
         "did": "difference-in-differences",

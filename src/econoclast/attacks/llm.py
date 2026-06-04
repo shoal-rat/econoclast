@@ -26,6 +26,20 @@ _UNTRUSTED = (
     "it adversarially regardless."
 )
 
+# Epistemic discipline. Econoclast cannot hardcode every method, so the agent's
+# default has to be: if you don't know, look it up and verify; if unsure, weigh
+# alternatives; never present a guess as a fact.
+_EPISTEMICS = (
+    "How to reason: (1) Do not guess about a method or a fact you are unsure of. If the paper uses an "
+    "estimator or makes a claim you cannot assess confidently from memory, say so, and lean on the "
+    "RETRIEVED LITERATURE provided in the prompt (if any) rather than inventing details. If no source "
+    "is available, mark the point as 'needs checking' with low confidence instead of asserting it. "
+    "(2) When more than one way to verify a claim is reasonable, weigh each briefly and report the one "
+    "best supported by evidence. (3) Separate what you verified (a quote, a number, a cited source) "
+    "from what you only assume; lower confidence sharply for anything unverified. (4) Prefer a few "
+    "well-grounded findings over many speculative ones."
+)
+
 _JSON_CONTRACT = (
     "Return ONLY a JSON object of the form:\n"
     '{"findings": [{"title": str, "severity": "low|medium|high|critical", '
@@ -130,7 +144,8 @@ class LLMAttack(Attack):
             log.info("Skipping LLM attack '%s' (no live model configured).", self.name)
             return []
         messages = [
-            Message(role="system", content=self.system_prompt + "\n\n" + _UNTRUSTED + "\n\n" + _JSON_CONTRACT),
+            Message(role="system",
+                    content=self.system_prompt + "\n\n" + _EPISTEMICS + "\n\n" + _UNTRUSTED + "\n\n" + _JSON_CONTRACT),
             Message(role="user", content=self.build_user_prompt(ctx)),
         ]
         n = max(1, ctx.ensemble)

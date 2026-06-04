@@ -149,6 +149,22 @@ Run `econoclast attacks` for the list, or `--attacks statcheck,caliper` for a su
 `--ensemble N` each model check runs N times and only findings that recur survive. The algorithms and
 references are in [docs/attacks.md](docs/attacks.md).
 
+## It researches what it doesn't know
+
+Economics uses too many methods to hardcode a checker for each one, so Econoclast doesn't try. It runs
+the built-in checks where they apply, and for anything else it does what a careful referee does with
+an unfamiliar method: looks it up, then verifies.
+
+When a paper uses a method without a built-in test (synthetic control, a bunching estimator, a
+shift-share instrument, a structural model, double machine learning), Econoclast retrieves that
+method's assumptions and standard diagnostics from the literature, then checks the paper against them
+instead of relying on the model's memory. Every prompt carries the same rule: do not guess; lean on
+the sources; mark anything you could not verify and give it low confidence. With `--deep` it branches,
+running several verification strategies and letting a judge keep the best-supported. With `--allow-code`
+and a dataset in hand, it can write and run a diagnostic for a method it does not cover (off by
+default, since that runs model-written code). The reasoning behind this is in
+[docs/philosophy.md](docs/philosophy.md).
+
 ## Replication mode
 
 The checks above read the PDF. They cannot tell you whether the result holds under a different but

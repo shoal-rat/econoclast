@@ -50,6 +50,7 @@ def review(
     no_literature: bool = typer.Option(False, "--no-literature", help="Skip online literature retrieval."),
     no_blind: bool = typer.Option(False, "--no-blind", help="Don't blind author identity (not recommended)."),
     ensemble: int = typer.Option(1, "--ensemble", help="Run each LLM attack N times; keep findings that recur."),
+    deep: bool = typer.Option(False, "--deep", help="Branch-and-merge: try several verification strategies for hard methods."),
     offline: bool = typer.Option(False, "--offline", help="Force the offline mock model."),
     attacks: str | None = typer.Option(None, "--attacks", help="Comma-separated subset of attack names."),
     replicate: Path | None = typer.Option(None, "--replicate",
@@ -85,6 +86,7 @@ def review(
             use_literature=not no_literature,
             blind=not no_blind,
             ensemble=ensemble,
+            deep=deep,
             replication_config=str(replicate) if replicate else None,
             max_workers=workers,
             progress=lambda m: status.update(f"[bold]Reviewing…[/bold] {m}"),
@@ -105,6 +107,8 @@ def verify(
     backend: str = typer.Option("auto", "--backend", "-b", help="auto | claude | codex | mock"),
     no_literature: bool = typer.Option(False, "--no-literature"),
     no_blind: bool = typer.Option(False, "--no-blind"),
+    deep: bool = typer.Option(False, "--deep", help="Branch-and-merge verification for hard methods."),
+    allow_code: bool = typer.Option(False, "--allow-code", help="Let the agent write+run a check for an uncovered method (untrusted)."),
     config: Path | None = typer.Option(None, "--config", "-c"),
     verbose: bool = typer.Option(False, "--verbose", "-v"),
 ) -> None:
@@ -129,7 +133,8 @@ def verify(
     with console.status("[bold]Verifying...[/bold]", spinner="dots") as status:
         report = eco.verify(
             paper, data=str(data) if data else None,
-            use_literature=not no_literature, blind=not no_blind, max_workers=workers,
+            use_literature=not no_literature, blind=not no_blind, deep=deep, allow_code=allow_code,
+            max_workers=workers,
             progress=lambda m: status.update(f"[bold]Verifying...[/bold] {m}"),
         )
 

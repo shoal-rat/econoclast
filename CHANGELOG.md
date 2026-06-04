@@ -5,6 +5,19 @@ All notable changes to Econoclast are documented here. Format follows
 
 ## [Unreleased]
 
+### Added (research-then-verify, instead of hardcoding every method)
+- The agent now researches methods it does not cover. `detect_methods` + `method_coverage` split a
+  paper's estimators into built-in checks vs ones that need research; for the latter, Econoclast
+  retrieves the method's assumptions and diagnostics from the literature and audits the paper against
+  them (`methodology-audit` attack). Validated live on a synthetic-control paper.
+- Every model prompt carries an epistemic rule: do not guess, lean on retrieved sources, mark
+  unverified points and give them low confidence; the referee discounts unverified findings.
+- `--deep`: branch-and-merge. Run several verification strategies for a hard question and let a judge
+  keep the best-supported, dropping duplicates and weak points.
+- `--allow-code`: the agent writes and runs a diagnostic for an uncovered method when a dataset is
+  available (opt-in, untrusted, denylist-guarded).
+- See docs/philosophy.md.
+
 ### Added (roadmap completion)
 - **McCrary (2008) density test** for RDD manipulation (log-density jump + standard error + bandwidth
   scan), replacing the binomial screening test. Validated against synthetic clean/manipulated data.

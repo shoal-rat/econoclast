@@ -55,27 +55,38 @@ class Econoclast:
         use_literature: bool = True,
         blind: bool = True,
         ensemble: int = 1,
+        deep: bool = False,
+        allow_code: bool = False,
+        data_path: str | None = None,
         replication_config: str | None = None,
         max_workers: int = 6,
         progress=None,
     ) -> Report:
+        from econoclast.attacks.designs import detect_methods
+
         paper = load_paper(paper_path)
         designs = detect_designs(paper.text)
-        log.info("Detected design(s): %s", design_label(designs))
+        methods = detect_methods(paper.text)
+        log.info("Detected design(s): %s | method(s): %s", design_label(designs), ", ".join(sorted(methods)) or "-")
 
         ctx = AttackContext(
             paper=paper,
             settings=self.settings,
             router=self.router,
             designs=designs,
+            methods=methods,
             searcher=self.searcher if use_literature else None,
             blind=blind,
             ensemble=max(1, ensemble),
+            deep=deep,
+            allow_code=allow_code,
+            data_path=data_path,
         )
         paper_norm = normalize_for_match(paper.text)
 
         if use_literature and self.searcher is not None:
             ctx.literature = self._gather_literature(paper, designs)
+            ctx.methodology = self._gather_methodology(methods)
 
         include_llm = use_llm and self.router.is_live()
         attacks = select_attacks(attack_names, include_llm=True, include_forensic=True)
@@ -167,6 +178,8 @@ class Econoclast:
                 "timestamp": datetime.now(timezone.utc).isoformat(timespec="seconds"),
                 "llm_live": include_llm,
                 "blind_review": blind,
+                "deep": deep,
+                "methods": sorted(methods),
                 "models": self._models_used() if include_llm else [],
                 "usage": self.router.summary(),
                 "attacks_run": run_names,
@@ -189,6 +202,8 @@ class Econoclast:
         use_llm: bool = True,
         use_literature: bool = True,
         blind: bool = True,
+        deep: bool = False,
+        allow_code: bool = False,
         max_workers: int = 6,
         progress=None,
     ) -> Report:
@@ -231,6 +246,7 @@ class Econoclast:
 
         report = self.review(
             paper_file, use_llm=use_llm, use_literature=use_literature, blind=blind,
+            deep=deep, allow_code=allow_code, data_path=data_path,
             replication_config=spec_path, max_workers=max_workers, progress=progress,
         )
         report.meta["dataset"] = info
@@ -269,6 +285,36 @@ class Econoclast:
         except Exception as exc:  # noqa: BLE001 — one attack must not kill the run
             log.warning("attack '%s' raised: %s", attack.name, exc)
             return []
+
+    def _gather_methodology(self, methods) -> dict[str, str]:
+        """Retrieve each uncovered method's assumptions/diagnostics so the agent can
+        verify against the literature instead of guessing."""
+        if not self.searcher:
+            return {}
+        from econoclast.attacks.designs import method_coverage
+
+        targets = method_coverage(methods)["needs_research"][:3]
+        out: dict[str, str] = {}
+        queries = {
+            "synthetic_control": "synthetic control method identifying assumptions placebo inference",
+            "bunching": "bunching estimator identification assumptions elasticity",
+            "shift_share": "shift-share Bartik instrument identification assumptions exogeneity",
+            "regression_kink": "regression kink design assumptions smoothness",
+            "gmm": "GMM weak identification overidentification test assumptions",
+            "ml_causal": "double machine learning causal forest assumptions inference",
+            "structural": "structural demand estimation identification BLP instruments assumptions",
+        }
+        for m in targets:
+            try:
+                refs = self.searcher.search(queries.get(m, f"{m} econometrics identifying assumptions"), limit=4)
+                blocks = "\n\n".join(r.context_block(max_abstract=400) for r in refs[:4])
+                if blocks:
+                    out[m] = blocks
+            except Exception as exc:  # noqa: BLE001
+                log.warning("methodology search for %s failed: %s", m, exc)
+        if out:
+            log.info("Retrieved methodology for: %s", ", ".join(out))
+        return out
 
     def _gather_literature(self, paper, designs):
         topic = paper.title
