@@ -30,7 +30,7 @@ await page.addStyleTag({ content: `
   #film-card{position:fixed;inset:0;z-index:99;display:grid;place-items:center;background:#0b1430;color:#f0d58a;
     text-align:center;font:600 34px Cinzel,serif;letter-spacing:.08em;transition:opacity .6s}
   #film-card small{display:block;margin-top:14px;font:italic 500 26px "Cormorant Garamond","Songti SC",serif;color:#efe7d6;letter-spacing:0}
-  #film-sub{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);z-index:98;max-width:1100px;text-align:center;
+  #film-sub{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);z-index:100;max-width:1100px;text-align:center;
     padding:10px 26px;background:rgba(6,9,22,.78);color:#fff;font:500 24px/1.35 "Cormorant Garamond","Songti SC",serif;
     border-top:2px solid #c9a23a;opacity:0;transition:opacity .4s}
   #film-sub b{display:block;font:700 15px Cinzel,serif;letter-spacing:.3em;color:#f0d58a}` });
