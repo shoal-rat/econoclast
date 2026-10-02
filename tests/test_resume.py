@@ -185,11 +185,16 @@ def test_a_session_the_agent_lost_starts_fresh_from_the_case(fake):
 
 def test_api_resume_refuses_running_and_finished_hunts():
     from econoclast.app.api import Api
+    from econoclast.arsenal.tools import Arsenal
 
     api = Api()
     case = Case.create(paper="p")
     case.update_meta(status="running")
     assert api.resume(case.id) == {"ok": False, "error": "running"}
+    finished = Case.create(paper="q")
+    Arsenal(finished).pronounce_verdict("Stands.", "Nothing landed.", "n/a", [])
+    finished.update_meta(status="done")
+    assert api.resume(finished.id) == {"ok": False, "error": "done"}
 
 
 # ------------------------------------------------------------------ the region guard
