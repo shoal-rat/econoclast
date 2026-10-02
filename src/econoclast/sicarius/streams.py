@@ -135,6 +135,9 @@ class ClaudeStream:
                      "mcp": [{"name": m.get("name"), "status": m.get("status")} for m in obj.get("mcp_servers", [])],
                      "n_tools": len(obj.get("tools") or [])}]
         if t == "assistant":
+            msg = obj.get("message") or {}
+            if obj.get("error") or obj.get("is_api_error_message") or msg.get("model") == "<synthetic>":
+                return []  # Claude Code's own "API Error: ..." text; the result reports it as agent.error
             who = self.who(obj.get("parent_tool_use_id"))
             out: list[Event] = []
             for block in (obj.get("message") or {}).get("content") or []:
@@ -189,7 +192,9 @@ class ClaudeStream:
                     + (u.get("cache_creation_input_tokens") or 0),
                     "output_tokens": u.get("output_tokens") or 0,
                     "subtype": obj.get("subtype"), "is_error": bool(obj.get("is_error"))}]
-            if obj.get("result"):
+            if obj.get("result") and obj.get("is_error"):  # e.g. "API Error: ..." is not the Sicarius's report
+                out.append({"kind": "agent.error", "text": _short(str(obj["result"]), 400)})
+            elif obj.get("result"):
                 out.append({"kind": "final", "text": str(obj["result"])[:12000]})
             return out
         return []
@@ -225,9 +230,9 @@ class CodexStream:
                 out.append({"kind": "final", "text": self.last_message[:12000]})
             return out
         if t in ("turn.failed", "error"):
-            err = obj.get("error") or {}
-            msg = err.get("message") if isinstance(err, dict) else (obj.get("message") or str(err))
-            return [{"kind": "agent.error", "text": _short(str(msg), 400)}]
+            err = obj.get("error")
+            msg = (err.get("message") if isinstance(err, dict) else err) or obj.get("message") or ""
+            return [{"kind": "agent.error", "text": _short(str(msg), 400)}] if msg else []
         if not t.startswith("item."):
             return []
         item = obj.get("item") or {}

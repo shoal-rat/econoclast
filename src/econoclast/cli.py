@@ -64,25 +64,35 @@ def hunt(
     backend: str = typer.Option("auto", "--backend", "-b", help="auto | claude | codex."),
     depth: str = typer.Option("thorough", "--depth", help="thorough | swift."),
     case_dir: str = typer.Option("", "--case", help="Run an existing case folder (used by the app)."),
+    resume: bool = typer.Option(False, "--resume", help="Take up a stopped hunt in --case where it ended."),
 ) -> None:
     """Unleash the Sicarius on a paper, here in the terminal."""
     import signal
-    import threading
-    import time
 
     from econoclast.case.store import Case
     from econoclast.sicarius import Hunt, NoAgent
 
     if case_dir:
+        # Stop can arrive while the runner is still starting up: remember it and honour it once the hunt exists
+        held: dict = {}
+
+        def on_term(*_):  # noqa: ANN002, ANN202
+            held["stop"] = True
+            if "hunt" in held:
+                held["hunt"].abort()
+
+        signal.signal(signal.SIGTERM, on_term)
         case = Case(case_dir)
         try:
             h = Hunt(case)
         except NoAgent as exc:
-            case.update_meta(status="failed", error=str(exc))
-            case.emit("case.closed", status="failed", error=str(exc))
+            case.emit("case.closed", status="failed", error=str(exc), failure="no_agent", resumable=True)
+            case.update_meta(status="failed", error=str(exc), failure="no_agent", resumable=True)
             raise typer.Exit(1) from exc
-        signal.signal(signal.SIGTERM, lambda *_: h.abort())
-        h.run()
+        held["hunt"] = h
+        if held.get("stop"):
+            h.abort()
+        h.run(resume="manual" if resume else "")
         return
 
     if not paper:
@@ -111,9 +121,40 @@ def hunt(
         console.print(f"[red]{exc}[/]")
         raise typer.Exit(1) from exc
     console.print(f"[bold #c9a23a]ECONOCLAST[/] · case [dim]{case.root}[/] · agent [bold]{h.label}[/]")
-    t = threading.Thread(target=h.run, daemon=True)
+    _follow(case, h)
+
+
+@app.command()
+def resume(case_id: str = typer.Argument(..., help="The case id (see `econoclast cases`) or its folder.")) -> None:
+    """Take up a stopped hunt where it ended: the same agent session, the case's data restored."""
+    import os
+
+    from econoclast.case.store import Case
+    from econoclast.sicarius import Hunt, NoAgent
+
+    case = Case(case_id) if Path(case_id).expanduser().is_dir() else Case.load(case_id)
+    if case.verdict() is not None:
+        console.print("[yellow]That hunt already has its verdict.[/]")
+        raise typer.Exit(1)
+    try:
+        h = Hunt(case)
+    except NoAgent as exc:
+        console.print(f"[red]{exc}[/]")
+        raise typer.Exit(1) from exc
+    if not case.claim(runner_pid=os.getpid()):
+        console.print("[yellow]That hunt is still running.[/]")
+        raise typer.Exit(1)
+    console.print(f"[bold #c9a23a]ECONOCLAST[/] · resuming [dim]{case.root}[/] · agent [bold]{h.label}[/]")
+    _follow(case, h, resume="manual", seen=len(case.events()))
+
+
+def _follow(case, h, *, resume: str = "", seen: int = 0) -> None:  # noqa: ANN001
+    """Run the hunt in a thread and print its events in the terminal."""
+    import threading
+    import time
+
+    t = threading.Thread(target=lambda: h.run(resume=resume), daemon=True)
     t.start()
-    seen = 0
     try:
         while t.is_alive() or seen < len(case.events()):
             for ev in case.events(seen):
@@ -171,9 +212,20 @@ def _print_event(case, ev: dict) -> None:  # noqa: ANN001
                 case.answer_plea(ev["plea_id"], url=ans.strip())
         else:
             case.answer_plea(ev["plea_id"], declined=True)
+    elif k == "case.resumed":
+        console.rule(f"[bold #c9a23a]Resumed[/] [dim]attempt {ev.get('attempt')} · {ev.get('reason')}[/]")
+    elif k == "retry.wait":
+        console.print(f"  [yellow]Connection lost; trying again in {ev.get('seconds')} s[/]")
+    elif k == "region.paused":
+        console.print(f"  [yellow]Paused by the region guard: the connection is in {ev.get('name')}. Nothing is "
+                      "sent to the agent's service until it leaves the blocked regions.[/]")
+    elif k == "region.cleared":
+        console.print(f"  [green]Connection in {ev.get('name')}; the hunt continues.[/]")
     elif k == "case.closed":
         style = "green" if ev.get("status") == "done" else "red"
         console.print(f"[{style}]Hunt {ev.get('status')}[/]" + (f": {escape(str(ev.get('error')))}" if ev.get("error") else ""))
+        if ev.get("resumable"):
+            console.print(f"[dim]Resume it with: econoclast resume {case.id}[/]")
 
 
 @app.command()

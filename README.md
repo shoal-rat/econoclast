@@ -148,6 +148,25 @@ openICPSR package behind a login), the traveller from the prologue walks onto th
 their hands, and a tablet asks you for exactly that file. Drop it in, paste a link, or say you can't,
 and the hunt goes on.
 
+**When the connection drops.** If the model service goes away mid-hunt (a dropped connection, an
+overloaded or rate-limited API), the clepsydra says it is waiting for the network and the hunt resumes
+the same agent session on its own after 30 s, 90 s and 4 min. A hunt that stops for a reason it should
+not retry by itself (a usage limit, a logged-out CLI, a refused request, a crash, or you calling it off)
+keeps everything it found and offers **Resume the hunt**, on the wall and in its Tabula: the Sicarius
+gathers its tesserae again, gets its data back from the vault, reopens its own session (Claude Code
+`--resume`, `codex exec resume`) with a summary of the wounds and parries so far, and walks the stations
+that remain. From a terminal: `econoclast resume <case-id>`.
+
+**The region guard.** Before every agent run, and every 30 seconds during one, Econoclast looks up the
+country of this machine's public IP over the route the agent's own CLI takes (Claude Code follows
+`HTTPS_PROXY`/`HTTP_PROXY` and not SOCKS; Codex also follows `ALL_PROXY`; a system-wide VPN covers both).
+While it is in one of `blocked_regions` (by default mainland China, Hong Kong, Macau and Taiwan), the agent
+does not start, or its whole process group is frozen: nothing is sent to Claude or Codex, and a banner on
+the wall says so. When the connection is back outside, the hunt continues where it was. Until a first
+lookup succeeds, and after two failed lookups in a row, the region counts as blocked. The guard checks on
+a timer, so it cannot stop what was sent in the seconds before a check; a VPN's own kill switch closes
+that gap. The lookups go to api.country.is and ipinfo.io.
+
 When the verdict is in, the **Tabula** lays it out: the score and what it means, every wound with its
 quote and remedy, the guards that held, the specification curve drawn in tesserae, the reproduction
 result, and the agent's own report. The same report is written to `tabula.html`, `tabula.md` and
@@ -293,6 +312,11 @@ browser_mcp: true      # attach the Playwright MCP (needs npx)
 subagents: true        # let Claude Code send conspirators
 time_limit_min: 90
 pack_after: true       # pack data and big outputs into the case vault when a hunt ends
+auto_resume: 3         # resume on its own after this many dropped connections
+resume_backoff: [30, 90, 240]   # seconds to wait before each of those
+region_guard: true     # hold the agent while the connection is in a blocked region (env ECONOCLAST_REGION_GUARD=0 turns it off)
+blocked_regions: [CN, HK, MO, TW]
+region_check_s: 30
 lang: auto             # auto | en | zh (the app follows your system language)
 extra_mcp:             # more MCP servers to hand the agent
   fetch: { command: uvx, args: [mcp-server-fetch] }
