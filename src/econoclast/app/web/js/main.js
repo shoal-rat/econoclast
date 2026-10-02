@@ -2,7 +2,7 @@
 
 import { api, connect, isNative } from "./bridge.js";
 import { Director, LAYOUT, escapeHtml } from "./director.js";
-import { bandFor, getLang, setLang, setWorld, t } from "./i18n.js";
+import { bandFor, getLang, regionLabel, setLang, setWorld, t } from "./i18n.js";
 import { prologue } from "./prologue.js";
 import { sfx } from "./sfx.js";
 import { Assets, Stage } from "./stage.js";
@@ -20,7 +20,12 @@ const app = {
 function setView(v) {
   app.view = v;
   $("#app").dataset.view = v;
+  // the end-of-hunt buttons and the pause banner live on the shared stage; they belong to the theatre only
+  if (v !== "theatre") clearTheatreChrome();
   fit();
+}
+function clearTheatreChrome() {
+  document.querySelectorAll(".read-tabula, .end-actions, .region-banner").forEach((e) => e.remove());
 }
 
 // keep the 1600x900 wall at 16:9: letterboxed in the theatre, cropped to cover elsewhere
@@ -60,6 +65,8 @@ async function boot() {
     closePlea: (id) => app.plea.close(id),
     medallion: (f, instant) => medallion(app.stage, f, instant),
     closed: (ev, instant) => onClosed(ev, instant),
+    resumed: (ev, instant) => onResumed(ev, instant),
+    region: (ev) => onRegion(ev),
   });
   app.clepsydra = new Clepsydra($("#clepsydra"), app.director);
   wireChrome();
@@ -226,22 +233,26 @@ async function unleash() {
 
 // --------------------------------------------------------------- theatre
 function resetTheatre() {
+  clearTimeout(app.readTimer);
   const d = app.director;
   d.reset(); d.speed = 1; d.live = !app.demo;
   app.chronicle.reset(); app.hudView.reset(); app.frieze.reset();
   app.stage.clearActors(); app.stage.clearOverlay(); app.stage.clearFx(); app.stage.setDim(0);
   $("#btn-abort").hidden = false;
-  document.querySelectorAll(".read-tabula").forEach((e) => e.remove());
+  clearTheatreChrome();
 }
 
-async function startTheatre(caseId, existing) {
+// status: the case's current status, so replaying an old close of a hunt that is running again
+// does not offer to resume it
+async function startTheatre(caseId, existing, status = "running") {
   stopPolling();
   clearTimeout(idleTimer);
-  app.caseId = caseId; app.demo = false; app.since = 0;
+  app.caseId = caseId; app.demo = false; app.since = 0; app.liveStatus = status;
   resetTheatre();
   setView("theatre");
   if (existing.length) {
-    await app.director.fastForward(existing);
+    app.fastForwarding = true;  // old closes in the history must not offer Resume for a hunt that runs again
+    try { await app.director.fastForward(existing); } finally { app.fastForwarding = false; }
     app.since = existing[existing.length - 1].seq + 1;
   }
   app.poll = setInterval(pollOnce, 700);
@@ -254,6 +265,7 @@ async function pollOnce() {
   pollOnce.busy = true;
   try {
     const r = await api.events(app.caseId, app.since);
+    app.liveStatus = r.status;
     if (r.events.length) { app.since = r.events[r.events.length - 1].seq + 1; app.director.enqueue(r.events); }
     if (["done", "failed", "aborted", "interrupted"].includes(r.status) && !r.events.length && !app.director.running) stopPolling();
   } catch (e) { console.warn(e); }
@@ -262,21 +274,80 @@ async function pollOnce() {
 
 function onClosed(ev, instant) {
   $("#btn-abort").hidden = true;
+  document.querySelector(".region-banner")?.remove();
   if (ev.status === "done" || app.demo) {
-    setTimeout(() => showReadButton(), instant ? 0 : 3500);
-  } else {
-    toast(ev.status === "aborted" ? t("hunt_aborted") : t("hunt_failed"), 6000);
-    showReadButton(true);
+    clearTimeout(app.readTimer);
+    app.readTimer = setTimeout(() => {
+      if (app.view === "theatre" && app.director.closedState) showReadButton();
+    }, instant ? 0 : 3500);
+    return;
   }
+  // a hunt that is running again (resumed) replays its old close on the way: offer nothing then
+  if (app.fastForwarding && ["running", "starting"].includes(app.liveStatus)) return;
+  if (!instant) toast(ev.failure ? t(`fail_${ev.failure}`) : ev.status === "aborted" ? t("hunt_aborted") : t("hunt_failed"), 7000);
+  showEndActions(ev);
 }
-function showReadButton(failed = false) {
+function showReadButton() {
   if (document.querySelector(".read-tabula")) return;
   const b = document.createElement("button");
   b.className = "tessera read-tabula";
-  b.textContent = failed ? t("back") : t("read_tabula");
-  b.style.cssText = "position:absolute;right:40px;bottom:36px;z-index:6";
-  b.onclick = () => (failed && !app.demo ? (app.caseId ? openTabula(app.caseId) : atrium()) : app.demo ? openDemoTabula() : openTabula(app.caseId));
+  b.textContent = t("read_tabula");
+  b.onclick = () => (app.demo ? openDemoTabula() : openTabula(app.caseId));
   $("#stage-box").appendChild(b);
+}
+// a hunt that ended without its verdict: take it up again, or go home
+function showEndActions(ev) {
+  if (document.querySelector(".end-actions")) return;
+  const box = document.createElement("div");
+  box.className = "end-actions";
+  const id = app.caseId;
+  if (id && ev.resumable !== false) {
+    const r = document.createElement("button");
+    r.className = "tessera";
+    r.textContent = t("resume");
+    r.onclick = () => resumeHunt(id);
+    box.appendChild(r);
+  }
+  const back = document.createElement("button");
+  back.className = "ghost";
+  back.textContent = t("back");
+  back.onclick = () => { app.playToken = null; atrium(); };
+  box.appendChild(back);
+  $("#stage-box").appendChild(box);
+}
+async function resumeHunt(id) {
+  if (resumeHunt.busy) return;  // one press is one runner
+  resumeHunt.busy = true;
+  const buttons = () => document.querySelectorAll(".end-actions button, #tb-resume");
+  buttons().forEach((b) => { b.disabled = true; });
+  try {
+    sfx.unlock();
+    const r = await api.resume(id);
+    if (!r.ok) {
+      toast(t(`resume_${r.error}`), 6000);
+      buttons().forEach((b) => { b.disabled = false; });
+      return;
+    }
+    const evs = await api.events(id, 0);
+    await startTheatre(id, evs.events, "starting");
+  } finally {
+    resumeHunt.busy = false;
+  }
+}
+// the region guard paused the agent: say so on the wall until it lifts
+function onRegion(ev) {
+  document.querySelector(".region-banner")?.remove();
+  if (ev.kind !== "region.paused" || app.view !== "theatre") return;
+  const b = document.createElement("div");
+  b.className = "region-banner";
+  b.innerHTML = `<b>⏸ ${t("paused_region")} · ${escapeHtml(regionLabel(ev.region))}</b><span>${t("paused_note")}</span>`;
+  $("#stage-box").appendChild(b);
+}
+function onResumed(ev, instant) {
+  clearTimeout(app.readTimer);
+  document.querySelectorAll(".end-actions, .read-tabula, .region-banner").forEach((e) => e.remove());
+  if (!app.demo) $("#btn-abort").hidden = false;
+  if (!instant) toast(t("resumed_toast"), 4000);
 }
 
 // ------------------------------------------------------------- archive
@@ -284,17 +355,21 @@ async function openCase(id) {
   const data = await api.open_case(id);
   if (["running", "starting"].includes(data.status)) {
     const r = await api.events(id, 0);
-    return startTheatre(id, r.events);
+    return startTheatre(id, r.events, data.status);
   }
-  if (data.verdict || (data.wounds || []).length) return openTabula(id, data);
+  if (hasVerdict(data) || (data.wounds || []).length) return openTabula(id, data);
   const r = await api.events(id, 0);
-  startTheatre(id, r.events);
+  startTheatre(id, r.events, data.status);
 }
+// the case API sends an empty object when there is no verdict yet
+function hasVerdict(d) { return !!(d && d.verdict && Object.keys(d.verdict).length); }
 async function openTabula(id, data) {
   stopPolling();
   const d = data || (await api.open_case(id));
   setView("tabula");
-  renderTabula($("#tabula"), d, { assets: app.assets, onBack: atrium, onReplay: () => replayCase(id) });
+  const resumable = !hasVerdict(d) && !["running", "starting", "done"].includes(d.status);
+  renderTabula($("#tabula"), d, { assets: app.assets, onBack: atrium, onReplay: () => replayCase(id),
+    onResume: resumable ? () => resumeHunt(id) : null });
 }
 async function replayCase(id) {
   const r = await api.events(id, 0);

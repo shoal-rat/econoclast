@@ -32,6 +32,10 @@ Minimum wages unambiguously raise employment.
 @pytest.fixture(autouse=True)
 def _isolated_home(tmp_path, monkeypatch):
     monkeypatch.setenv("ECONOCLAST_HOME", str(tmp_path / "home"))
+    monkeypatch.setenv("ECONOCLAST_REGION_GUARD", "0")  # no geolocation lookups from tests (opt in per test)
+    # a broken fake must never fall through to the real (paid) Claude Code or Codex on this machine
+    monkeypatch.setattr("econoclast.config._CLAUDE_FALLBACKS", ())
+    monkeypatch.setattr("econoclast.config._CODEX_FALLBACKS", ())
     yield
 
 

@@ -170,6 +170,25 @@ class Api:
             return str(dst.relative_to(case.root))
         return ""
 
+    def resume(self, case_id: str) -> dict[str, Any]:
+        """Take up a hunt that stopped before its verdict: same agent session, data back from the vault."""
+        from econoclast.sicarius import NoAgent, launch_detached
+
+        case = Case.load(case_id)
+        meta = case.meta()
+        if case.verdict() is not None:
+            return {"ok": False, "error": "done"}
+        if self._settings.pick_backend(meta.get("backend_used") or meta.get("backend")) is None:
+            return {"ok": False, "error": "no_agent"}
+        if not case.claim():  # one locked step: a second press finds it starting
+            return {"ok": False, "error": "running"}
+        try:
+            launch_detached(case, resume=True)
+        except (NoAgent, OSError):
+            case.update_meta(status="failed")
+            return {"ok": False, "error": "no_agent"}
+        return {"ok": True, "case_id": case.id}
+
     def abort(self, case_id: str) -> dict[str, Any]:
         from econoclast.sicarius import stop
 

@@ -2,7 +2,7 @@
 
 import { api, isNative } from "./bridge.js";
 import { escapeHtml } from "./director.js";
-import { bandFor, bandText, blurb, bladeName, getLang, getWorld, stationName, t } from "./i18n.js";
+import { attemptLabel, bandFor, bandText, blurb, bladeName, getLang, getWorld, regionLabel, stationName, t } from "./i18n.js";
 
 const getLangText = (x) => (getLang() === "zh" ? x.zh : x.en);
 
@@ -163,7 +163,19 @@ export class Chronicle {
     } else if (k === "final") {
       this.li("c-card final md", `<div class="k">${t("final_msg")}</div>${md(ev.text)}`);
     } else if (k === "case.closed" && ev.status !== "done") {
-      this.li("c-card", `<div class="k">${t(ev.status)}</div><div class="t">${escapeHtml(ev.error || (ev.status === "aborted" ? t("hunt_aborted") : t("hunt_failed")))}</div>`);
+      const why = ev.failure ? t(`fail_${ev.failure}`) : ev.status === "aborted" ? t("hunt_aborted") : t("hunt_failed");
+      const err = ev.error && ev.failure !== "aborted" ? `<div class="t err">${escapeHtml(String(ev.error).slice(-240))}</div>` : "";
+      this.li("c-card", `<div class="k">${t(ev.status)}</div><div class="t">${escapeHtml(why)}</div>${err}`);
+    } else if (k === "case.resumed") {
+      this.li("c-card info", `<div class="k">${t("resumed")} · ${attemptLabel(ev.attempt)}</div><div class="t">${escapeHtml(t(`why_${ev.reason}`))}</div>`);
+    } else if (k === "agent.error") {
+      this.li("c-card", `<div class="k">${t("agent_error")}</div><div class="t err">${escapeHtml(ev.text || "")}</div>`);
+    } else if (k === "retry.wait") {
+      this.li("c-tool", `<img src="assets/res/lamp.png" alt=""><span>${t("retry_wait")} ${ev.seconds}s</span>`);
+    } else if (k === "region.paused") {
+      this.li("c-card", `<div class="k">${t("paused_region")} · ${escapeHtml(regionLabel(ev.region))}</div><div class="t">${t("paused_note")}</div>`);
+    } else if (k === "region.cleared") {
+      this.li("c-tool", `<img src="assets/res/laurel.png" alt=""><span>${t("region_ok")} (${escapeHtml(regionLabel(ev.region))})</span>`);
     }
   }
 }
@@ -290,6 +302,8 @@ export class Clepsydra {
     $q(".cl-now").innerHTML = s.activity ? `${escapeHtml(s.activity)} <em>${fmt(s.activityFor)}</em>` : "…";
     let state, cls;
     if (s.closed) { state = t(s.closed === "done" ? "cl_done" : "cl_stopped"); cls = s.closed === "done" ? "done" : "stopped"; }
+    else if (s.held === "region") { state = t("cl_paused"); cls = "paused"; }
+    else if (s.held === "network") { state = t("cl_retry"); cls = "wait"; }
     else if (s.quiet < 20) { state = t("cl_working"); cls = "ok"; }
     else if (s.busyFresh) { state = `${t("cl_long")} · ${Math.round(s.busySecs / 60)} min`; cls = "wait"; }
     else if (s.quiet < 180) { state = t("cl_thinking"); cls = "wait"; }

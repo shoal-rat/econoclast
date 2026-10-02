@@ -3,6 +3,38 @@
 All notable changes to Econoclast are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/); versioning is [SemVer](https://semver.org/).
 
+## [2.1.0] - 2026-10-03 · Resume
+
+### Added
+- **Resume the hunt.** A hunt that stops before its verdict keeps everything it found and offers *Resume the
+  hunt* on the wall and in its Tabula (and `econoclast resume <case>`): the vault is unpacked, the agent's own
+  session is reopened (Claude Code `--resume`, `codex exec resume`) with a summary of the wounds and parries so
+  far, and the Sicarius reassembles on the wall. A session the agent lost starts fresh from the case files.
+- **Automatic retries.** Every run that ends without a verdict is classified (network, usage limit, login,
+  refusal, crash, stopped early). A dropped connection or an overloaded/rate-limited service is waited out
+  (30 s, 90 s, 4 min) and resumed on its own; an agent that stopped early is sent back once or twice.
+- **The region guard.** Before and during every agent run the runner checks the country of the machine's public
+  IP; while it is in `blocked_regions` (default CN, HK, MO, TW) the agent does not start or its process group
+  is frozen, so nothing is sent to Claude or Codex, and a banner on the wall says so.
+
+### Fixed
+- A dead local proxy ("connection refused", ECONNREFUSED) and "Rate limit reached" are network trouble and are
+  retried, not reported as a model refusal or a usage limit.
+- Stop is honoured at every step between agent runs (a region check, a retry wait, a resume); a verdict always
+  wins over a Stop that lands after it; one time budget covers a run's retries, and running out of it is a
+  resumable failure of its own; a case left "starting" by a runner that died is closed as interrupted.
+- One Resume press starts one runner: the case is claimed under its lock, and the buttons wait for the answer.
+- An explicit agent path that does not exist (or `off`) disables that agent instead of falling back to another
+  installed copy; the tests can no longer reach a real agent.
+- Codex `error` events keep their message; Claude Code's own "API Error" lines are no longer narrated as the
+  Sicarius speaking; the close reason comes from the agent's error, not the stderr tail.
+- `blocked_regions` written as one string ("CN, HK") is read as a list, and bad entries are dropped with a warning
+  instead of silently disabling the guard; `NO_PROXY` is honoured like the agent CLIs do.
+- A long background conspirator no longer kills the hunt: headless Claude Code only waited 10 minutes for
+  background subagents (`CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS`); it now gets the hunt's whole time budget.
+- The end-of-hunt button stayed on the atrium after a failed hunt (it lived on the shared stage); it now
+  belongs to the theatre only, and "Back to the atrium" goes to the atrium.
+
 ## [2.0.1] - 2026-10-02 · The disk image
 
 ### Added

@@ -2,7 +2,7 @@
 // Every event is played in order; when the agent outpaces the animation, the backlog is
 // applied instantly so the wall never falls behind the truth.
 
-import { bandFor, bladeName, getLang, sevWeight, stationName, t } from "./i18n.js";
+import { attemptLabel, bandFor, bladeName, getLang, regionLabel, sevWeight, stationName, t } from "./i18n.js";
 import { clamp, rand } from "./stage.js";
 import { plain } from "./md.js";
 import { sfx } from "./sfx.js";
@@ -56,7 +56,7 @@ export class Director {
     this.station = null; this.score = 0; this.wounds = []; this.parries = []; this.guards = {};
     this.amphorae = 0; this.conspirators = []; this.holes = []; this.target = ""; this.closed = null;
     this.forum = {}; this.stamps = [];
-    this.done = new Set(); this.activity = ""; this.activityAt = 0; this.lastSignal = 0; this.busySecs = 0;
+    this.done = new Set(); this.activity = ""; this.activityAt = 0; this.lastSignal = 0; this.busySecs = 0; this.held = null;
     this.busyAt = 0; this.t0 = null; this.lastTs = null; this.lastArrival = 0; this.closedState = null;
     this.viae = null; this.verdict = null; this.busy = false; this.lastSay = 0;
     this.queue = [];
@@ -111,7 +111,14 @@ export class Director {
     else if (k === "wound") this.mark(ev.wound.blade);
     else if (k === "parry") this.mark(ev.parry.blade);
     else if (k === "verdict") { this.mark("verdict"); this.activity = t("act_verdict"); }
-    else if (k === "case.closed") this.closedState = ev.status;
+    else if (k === "case.closed") {
+      this.closedState = ev.status; this.held = null;
+      if (ev.status !== "done") { this.activity = ev.failure ? t(`fail_${ev.failure}`) : t("hunt_failed"); this.activityAt = now; }
+    }
+    else if (k === "case.resumed") { this.closedState = null; this.held = null; this.activity = t("act_resume"); this.activityAt = now; }
+    else if (k === "retry.wait") { this.held = "network"; this.activity = `${t("act_wait")} · ${ev.seconds}s`; this.activityAt = now; }
+    else if (k === "region.paused") { this.held = "region"; this.activity = `${t("act_paused")} ${regionLabel(ev.region)}`; this.activityAt = now; }
+    else if (k === "region.cleared") { this.held = null; this.activity = t("region_ok"); this.activityAt = now; }
   }
   snapshot() {
     const total = Object.values(STEPS).reduce((a, xs) => a + xs.length, 0);
@@ -124,7 +131,7 @@ export class Director {
     return { station: st, doneHere, totalHere: here.length, overall: this.closedState === "done" ? 1 : this.done.size / total,
       activity: this.activity, activityFor: this.activityAt ? (now - this.activityAt) / 1000 : 0,
       quiet: this.lastSignal ? (now - this.lastSignal) / 1000 : 0, busySecs: this.busySecs,
-      busyFresh: this.busyAt && (now - this.busyAt) / 1000 < 90, elapsed, closed: this.closedState, live };
+      busyFresh: this.busyAt && (now - this.busyAt) / 1000 < 90, elapsed, closed: this.closedState, live, held: this.held };
   }
 
   async play(ev, instant) {
@@ -151,6 +158,10 @@ export class Director {
       case "plea.answered": return this.pleaAnswered(ev, instant);
       case "verdict": return this.verdictEv(ev, instant);
       case "case.closed": return this.closedEv(ev, instant);
+      case "case.resumed": return this.resumedEv(ev, instant);
+      case "retry.wait": return this.waitEv(ev, instant);
+      case "agent.error": if (!instant) this.st.float(this.sic().x, this.sic().y - 400, "✕", "red"); return;
+      case "region.paused": case "region.cleared": return this.regionEv(ev, instant);
       default: return;
     }
   }
@@ -719,11 +730,37 @@ export class Director {
   async closedEv(ev, instant) {
     this.closed = ev.status;
     this.ui.closed(ev, instant);
-    if (instant) return;
+    if (instant) { this.st.setDim(0); return; }  // like every other fast-forwarded close, a pause dim included
     if (ev.status === "aborted" || ev.status === "failed" || ev.status === "interrupted") {
       if (this.st.get("sic")) this.st.scatter("sic");
       this.st.setDim(0.45);
     }
+  }
+  // the scattered Sicarius gathers its tesserae again and steps back into the walk
+  async resumedEv(ev, instant) {
+    this.closed = null;
+    this.ui.resumed(ev, instant);
+    this.st.setDim(0);
+    const sic = this.st.get("sic");
+    if (instant) { if (sic) sic.visible = true; return; }
+    if (sic) await this.st.assemble("sic", 1500);
+    const s = this.sic();
+    this.st.float(s.x, s.y - 420, `⚔ ${attemptLabel(ev.attempt)}`, "gold");
+    sfx.play("bell");
+  }
+  async waitEv(ev, instant) {
+    if (instant) return;
+    const s = this.sic();
+    this.st.float(s.x + 60, s.y - 420, `⏳ ${ev.seconds}s`, "white");
+  }
+  // the region guard: the wall dims and holds still while nothing may be sent
+  async regionEv(ev, instant) {
+    const paused = ev.kind === "region.paused";
+    this.ui.region(ev, instant);
+    this.st.setDim(paused ? 0.35 : 0);
+    if (instant) return;
+    const s = this.sic();
+    this.st.float(s.x, s.y - 420, paused ? `⏸ ${regionLabel(ev.region)}` : "▶", paused ? "white" : "gold");
   }
 }
 

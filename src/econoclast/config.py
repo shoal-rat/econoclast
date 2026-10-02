@@ -11,6 +11,7 @@ arsenal. There is no API key to manage and no offline mode.
 from __future__ import annotations
 
 import os
+import re
 import shutil
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -57,6 +58,12 @@ class Settings:
     subagents: bool = True  # let Claude Code fan out conspirators (parallel subagents)
     time_limit_min: int = 90
     pack_after: bool = True  # pack data, downloads and big outputs into the case vault when a hunt ends
+    auto_resume: int = 3  # resume on its own after this many dropped connections / overloaded services
+    resume_backoff: list[int] = field(default_factory=lambda: [30, 90, 240])  # seconds before each of those
+    # The region guard: hold the agent while this machine's connection comes out in one of these regions.
+    region_guard: bool = True
+    blocked_regions: list[str] = field(default_factory=lambda: ["CN", "HK", "MO", "TW"])
+    region_check_s: int = 30
     host: str = "127.0.0.1"
     port: int = 7777
     lang: str = "auto"  # auto | en | zh
@@ -87,6 +94,12 @@ class Settings:
             subagents=bool(data.get("subagents", True)),
             time_limit_min=int(data.get("time_limit_min", 90)),
             pack_after=bool(data.get("pack_after", True)),
+            auto_resume=_int(data.get("auto_resume"), 3, "auto_resume"),
+            resume_backoff=[_int(x, 30, "resume_backoff") for x in _as_list(data.get("resume_backoff"))]
+            or [30, 90, 240],
+            region_guard=_flag(os.getenv("ECONOCLAST_REGION_GUARD"), data.get("region_guard", True)),
+            blocked_regions=_regions(data.get("blocked_regions", ["CN", "HK", "MO", "TW"])),
+            region_check_s=max(5, _int(data.get("region_check_s"), 30, "region_check_s")),
             host=str(data.get("host", "127.0.0.1")),
             port=int(os.getenv("ECONOCLAST_PORT") or data.get("port", 7777)),
             lang=str(data.get("lang", "auto")),
@@ -123,12 +136,56 @@ class Settings:
         return None
 
 
+def _flag(env: str | None, value: object) -> bool:
+    """An on/off setting: the environment wins; strings like "off" or "no" in the file count as off."""
+    for v in (env, value):
+        if isinstance(v, str) and v.strip():
+            return v.strip().lower() not in ("0", "off", "false", "no")
+        if v is not None and not isinstance(v, str):
+            return bool(v)
+    return True
+
+
+def _int(value: object, default: int, key: str) -> int:
+    if value is None:
+        return default
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        log.warning("config: %s=%r is not a number; using %s", key, value, default)
+        return default
+
+
+def _as_list(value: object) -> list:
+    if value is None:
+        return []
+    if isinstance(value, (list, tuple)):
+        return list(value)
+    if isinstance(value, str):
+        return [x for x in re.split(r"[,\s]+", value) if x]
+    return [value]
+
+
+def _regions(value: object) -> list[str]:
+    """Two-letter region codes, from a list or from "CN, HK" written as one string."""
+    out = []
+    for item in _as_list(value):
+        code = str(item).strip().upper()
+        if re.fullmatch(r"[A-Z]{2}", code):
+            out.append(code)
+        else:
+            log.warning("config: blocked_regions entry %r is not a two-letter region code; ignored", item)
+    return out
+
+
 def _find(name: str, fallbacks: tuple[str, ...]) -> str | None:
+    if not name or name.strip().lower() in ("off", "none", "disabled"):
+        return None  # this agent is switched off
+    if os.path.isabs(name):  # an explicit path means exactly that program, never a stand-in
+        return name if os.access(name, os.X_OK) else None
     hit = shutil.which(name)
     if hit:
         return hit
-    if os.path.isabs(name) and os.access(name, os.X_OK):
-        return name
     for fb in fallbacks:
         if os.access(fb, os.X_OK):
             return fb

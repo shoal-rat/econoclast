@@ -109,6 +109,17 @@ class Case:
             self.write_meta(meta)
             return meta
 
+    def claim(self, **changes: Any) -> bool:
+        """Mark the case 'starting' unless it is already running or starting, as one locked step, so two
+        Resume presses cannot start two runners."""
+        with _locked(self.path(".meta.lock")):
+            meta = self.meta()
+            if meta.get("status") in ("running", "starting"):
+                return False
+            meta.update({"status": "starting", "claimed": time.time(), "runner_pid": None, **changes})
+            self.write_meta(meta)
+            return True
+
     # -------------------------------------------------------------- events
     def emit(self, kind: str, /, **data: Any) -> dict[str, Any]:
         data.pop("kind", None)  # the event's kind is the first argument, never a payload field

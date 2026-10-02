@@ -7,7 +7,7 @@ import { md } from "./md.js";
 import { hash, paintScar } from "./stage.js";
 import { sevDots } from "./ui.js";
 
-export function renderTabula(root, d, { assets, onBack, onReplay, demo } = {}) {
+export function renderTabula(root, d, { assets, onBack, onReplay, onResume, demo } = {}) {
   const f = d.fragility || { score: 0 };
   const v = d.verdict || {};
   const band = bandFor(f.score || 0);
@@ -28,7 +28,8 @@ export function renderTabula(root, d, { assets, onBack, onReplay, demo } = {}) {
         ${demo ? "" : `<button class="ghost" id="tb-html">${t("open_html")}</button>
         <button class="ghost" id="tb-folder">${t("reveal")}</button>`}
         <button class="ghost" id="tb-replay">${t("replay")}</button>
-        <button class="tessera" id="tb-back">${t("new_hunt")}</button>
+        ${onResume ? `<button class="tessera" id="tb-resume">${t("resume")}</button>` : ""}
+        <button class="${onResume ? "ghost" : "tessera"}" id="tb-back">${t("new_hunt")}</button>
       </div>
     </div>
     <article class="tab-main">
@@ -56,6 +57,7 @@ export function renderTabula(root, d, { assets, onBack, onReplay, demo } = {}) {
   const $ = (s) => root.querySelector(s);
   $("#tb-back").onclick = onBack;
   $("#tb-replay").onclick = onReplay;
+  if (onResume) $("#tb-resume").onclick = onResume;
   if (!demo) {
     $("#tb-html").onclick = () => api.open_external(d.id, "tabula.html");
     $("#tb-folder").onclick = () => api.reveal(d.id, "");

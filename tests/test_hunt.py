@@ -202,7 +202,7 @@ def test_detached_hunt_runs_its_own_process_and_arsenal(tmp_path):
     fake.chmod(0o755)
     from econoclast.case.store import home
 
-    (home() / "config.yaml").write_text(f"backend: claude\nclaude_binary: {fake}\nbrowser_mcp: false\n")
+    (home() / "config.yaml").write_text(f"backend: claude\nclaude_binary: {fake}\ncodex_binary: off\nbrowser_mcp: false\n")
     case = Case.create(paper="https://arxiv.org/abs/2401.00001", lang="en")
     pid = launch_detached(case)
     deadline = time.time() + 90

@@ -143,7 +143,9 @@ def doctrine(*, lang: str, minutes: int, has_subagents: bool) -> str:
     blades = "\n".join(f"- {b.key} ({b.latin}): {b.hunts_en}" for b in BLADES)
     conspirators = (
         "\n- You can delegate with subagents (the `conspirator` agent). Give each one a single blade or a "
-        "single data hunt, the case folder, and what you already know. Read what they record."
+        "single data hunt, the case folder, and what you already know. Read what they record. While a "
+        "conspirator works in the background, swing the blades that do not need its results; if you end your "
+        "turn to wait for it, you are woken when it reports back, and the hunt goes on until pronounce_verdict."
         if has_subagents else ""
     )
     return f"""\
@@ -239,3 +241,45 @@ inspect_dataset, fabrica_build, fabrica_run, inflict_wound, parry. Ground every 
 quote and every computation wound in an artifact you produced. Do not call proclaim or
 pronounce_verdict; the Sicarius owns the walk and the verdict. Report back in a few sentences: what you
 tried, what you recorded, what remains uncertain."""
+
+
+_RESUME_WHY = {
+    "manual": "The traveller sent you back in.",
+    "network": "The connection to your model service dropped; it is back.",
+    "unfinished": "Your last turn ended before the verdict.",
+    "background": "Your last turn ended while a conspirator was still working, and its work was cut off.",
+    "lost_session": "Your earlier session could not be reopened, so this is a fresh one on the same case.",
+}
+
+
+def resume_brief(case, *, reason: str, backend: str = "claude") -> str:  # noqa: ANN001 - a Case
+    """What the Sicarius reads when a stopped hunt is taken up again: why, and what the case already holds."""
+    meta = case.meta()
+    lang = "Simplified Chinese (简体中文)" if meta.get("lang") == "zh" else "English"
+    evs = case.events()
+    stations = [e["station"] for e in evs if e.get("kind") == "station"]
+    lines = ["# Resume the hunt", "",
+             _RESUME_WHY.get(reason, "The hunt stopped before the verdict."),
+             "Everything you recorded is still in this case folder and in the arsenal: the wounds and parries "
+             "below, your notes in notes/, the data in data/ (restored from the vault), your scripts in code/ "
+             "and their results in out/.",
+             f"Stations entered so far: {' -> '.join(dict.fromkeys(stations)) or 'none'}.", ""]
+    wounds, parries = case.wounds(), case.parries()
+    if wounds:
+        lines.append("Wounds recorded:")
+        lines += [f"- {w.blade} [{w.severity}]: {w.title}" for w in wounds]
+    if parries:
+        lines.append("Parries recorded:")
+        lines += [f"- {p.blade}: {p.note[:160]}" for p in parries]
+    said = [e.get("text", "") for e in evs if e.get("kind") == "narrate" and e.get("who") == "sicarius"
+            and not e.get("text", "").startswith("API Error")]
+    if said:
+        lines += ["", f"The last thing you told the traveller: {said[-1][:600]}"]
+    lines += ["",
+              "Pick up exactly where you stopped. Look at the case files you need instead of redoing finished "
+              "work, walk the stations that remain, and finish with pronounce_verdict and your final message. "
+              f"Keep narrating in {lang}."]
+    if backend == "codex":  # a Codex session it cannot reopen starts blank: point it at the standing orders
+        lines.append("Your standing orders and this case's brief are in MANDATE.md in this folder; if you do not "
+                     "have them in mind, read that file first.")
+    return "\n".join(lines)
