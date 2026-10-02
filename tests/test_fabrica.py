@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import os
+import subprocess
 import sys
 import time
 
@@ -12,11 +12,9 @@ from econoclast import fabrica
 
 
 def _alive(pid: int) -> bool:
-    try:
-        os.kill(pid, 0)
-        return True
-    except OSError:
-        return False
+    """Running, not merely a zombie waiting for init to reap it."""
+    state = subprocess.run(["ps", "-o", "stat=", "-p", str(pid)], capture_output=True, text=True).stdout.strip()
+    return bool(state) and not state.startswith("Z")
 
 
 @pytest.mark.skipif(sys.platform == "win32", reason="POSIX process groups")
