@@ -1,104 +1,153 @@
-"""Configuration: which backend to drive and a few run settings.
+"""Settings: which agent to unleash, how much rope to give it, which tools it carries.
 
-Precedence (lowest to highest):
-    built-in defaults  ->  YAML config file  ->  environment variables
+Precedence (lowest to highest): built-in defaults -> ``~/.econoclast/config.yaml`` ->
+``./econoclast.yaml`` -> environment variables.
 
-Econoclast is a native-LLM tool. It runs on Claude Code or Codex; there are no
-API keys, no model routing, and no offline mode to configure. The only model
-choice is which of the two CLIs to use ("auto" tries Claude Code first).
+Econoclast is a native-agent tool. The Sicarius *is* Claude Code or Codex, run as a
+full autonomous agent with network access, a shell, a browser and Econoclast's own MCP
+arsenal. There is no API key to manage and no offline mode.
 """
 
 from __future__ import annotations
 
 import os
+import shutil
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
 import yaml
-from dotenv import load_dotenv
 
-from econoclast.logging import get_logger
+from econoclast.log import get_logger
 
 log = get_logger("config")
+
+# Where the Codex CLI hides when it ships inside the ChatGPT desktop app.
+_CODEX_FALLBACKS = (
+    "/Applications/ChatGPT.app/Contents/Resources/codex-cli/bin/codex",
+    "/Applications/ChatGPT.app/Contents/Resources/codex",
+    "/Applications/Codex.app/Contents/Resources/codex",
+)
+_CLAUDE_FALLBACKS = (
+    str(Path.home() / ".claude" / "local" / "claude"),
+    str(Path.home() / ".local" / "bin" / "claude"),
+)
 
 
 @dataclass
 class LiteratureConfig:
     enabled: bool = True
     max_results: int = 12
-    sources: list[str] = field(default_factory=lambda: ["openalex", "arxiv", "semantic_scholar"])
+    sources: list[str] = field(default_factory=lambda: ["openalex", "semantic_scholar", "arxiv", "crossref"])
     local_dirs: list[str] = field(default_factory=list)
 
 
 @dataclass
 class Settings:
     backend: str = "auto"  # auto | claude | codex
-    model: str = ""  # optional model override passed to the CLI ("" = the CLI's default)
+    model: str = ""  # "" = the CLI's default model
     claude_binary: str = "claude"
     codex_binary: str = "codex"
     backend_args: list[str] = field(default_factory=list)
-    literature: LiteratureConfig = field(default_factory=LiteratureConfig)
+    # "full": no permission prompts, no sandbox, network on (the default; the agent works
+    # inside the case folder). "guarded": edits and shell stay inside the case folder.
+    permissions: str = "full"
+    browser_mcp: bool = True  # attach the Playwright MCP so blocked downloads can be browsed
+    extra_mcp: dict[str, Any] = field(default_factory=dict)  # more MCP servers for the agent
+    subagents: bool = True  # let Claude Code fan out conspirators (parallel subagents)
+    time_limit_min: int = 90
+    pack_after: bool = True  # pack data, downloads and big outputs into the case vault when a hunt ends
+    host: str = "127.0.0.1"
+    port: int = 7777
+    lang: str = "auto"  # auto | en | zh
     contact_email: str | None = None
-    cache_dir: str = ".econoclast_cache"
-    blind_default: bool = True
-    # When a download is blocked, let the agent fetch it with its own tools (browser, curl, search).
-    agent_download: bool = True
-    max_claims: int = 400
-    request_timeout: float = 240.0
+    literature: LiteratureConfig = field(default_factory=LiteratureConfig)
     raw: dict[str, Any] = field(default_factory=dict)
 
-    # ------------------------------------------------------------------ load
     @classmethod
     def load(cls, path: str | os.PathLike[str] | None = None) -> Settings:
-        load_dotenv(override=False)
         data: dict[str, Any] = {}
-        cfg_path = _find_config(path)
-        if cfg_path is not None:
-            log.debug("Loading config from %s", cfg_path)
-            with open(cfg_path, encoding="utf-8") as fh:
-                data = yaml.safe_load(fh) or {}
+        for cfg in _config_files(path):
+            try:
+                with open(cfg, encoding="utf-8") as fh:
+                    data.update(yaml.safe_load(fh) or {})
+            except OSError as exc:
+                log.warning("could not read %s: %s", cfg, exc)
 
-        lit_raw = data.get("literature", {}) or {}
-        literature = LiteratureConfig(
-            enabled=lit_raw.get("enabled", True),
-            max_results=int(lit_raw.get("max_results", 12)),
-            sources=list(lit_raw.get("sources", ["openalex", "arxiv", "semantic_scholar"])),
-            local_dirs=list(lit_raw.get("local_dirs", [])),
-        )
-
-        backend = (os.getenv("ECONOCLAST_BACKEND") or data.get("backend") or "auto").strip().lower()
-        contact = data.get("contact_email") or os.getenv("ECONOCLAST_CONTACT_EMAIL") or None
-
-        return cls(
-            backend=backend if backend in ("auto", "claude", "codex") else "auto",
-            model=str(os.getenv("ECONOCLAST_MODEL") or data.get("model", "")).strip(),
+        lit = data.get("literature", {}) or {}
+        s = cls(
+            backend=str(os.getenv("ECONOCLAST_BACKEND") or data.get("backend") or "auto").lower(),
+            model=str(os.getenv("ECONOCLAST_MODEL") or data.get("model") or ""),
             claude_binary=str(data.get("claude_binary", "claude")),
             codex_binary=str(data.get("codex_binary", "codex")),
             backend_args=list(data.get("backend_args", []) or []),
-            literature=literature,
-            contact_email=contact,
-            cache_dir=data.get("cache_dir", ".econoclast_cache"),
-            blind_default=bool(data.get("blind_default", True)),
-            agent_download=bool(data.get("agent_download", True)),
-            max_claims=int(data.get("max_claims", 400)),
-            request_timeout=float(data.get("request_timeout", 240.0)),
+            permissions=str(os.getenv("ECONOCLAST_PERMISSIONS") or data.get("permissions") or "full"),
+            browser_mcp=bool(data.get("browser_mcp", True)),
+            extra_mcp=dict(data.get("extra_mcp", {}) or {}),
+            subagents=bool(data.get("subagents", True)),
+            time_limit_min=int(data.get("time_limit_min", 90)),
+            pack_after=bool(data.get("pack_after", True)),
+            host=str(data.get("host", "127.0.0.1")),
+            port=int(os.getenv("ECONOCLAST_PORT") or data.get("port", 7777)),
+            lang=str(data.get("lang", "auto")),
+            contact_email=data.get("contact_email") or os.getenv("ECONOCLAST_CONTACT_EMAIL") or None,
+            literature=LiteratureConfig(
+                enabled=bool(lit.get("enabled", True)),
+                max_results=int(lit.get("max_results", 12)),
+                sources=list(lit.get("sources", LiteratureConfig().sources)),
+                local_dirs=list(lit.get("local_dirs", [])),
+            ),
             raw=data,
         )
+        if s.backend not in ("auto", "claude", "codex"):
+            s.backend = "auto"
+        if s.permissions not in ("full", "guarded"):
+            s.permissions = "full"
+        return s
 
-    # --------------------------------------------------------------- helpers
-    def cache_path(self) -> Path:
-        p = Path(self.cache_dir)
-        p.mkdir(parents=True, exist_ok=True)
-        return p
+    # ----------------------------------------------------------- agents
+    def claude_path(self) -> str | None:
+        return _find(self.claude_binary, _CLAUDE_FALLBACKS)
+
+    def codex_path(self) -> str | None:
+        return _find(self.codex_binary, _CODEX_FALLBACKS)
+
+    def pick_backend(self, prefer: str | None = None) -> tuple[str, str] | None:
+        """Return (label, binary path) for the agent to run, or None if neither exists."""
+        pref = (prefer or self.backend or "auto").lower()
+        order = {"claude": ["claude", "codex"], "codex": ["codex", "claude"]}.get(pref, ["claude", "codex"])
+        for which in order:
+            path = self.claude_path() if which == "claude" else self.codex_path()
+            if path:
+                return which, path
+        return None
 
 
-def _find_config(path: str | os.PathLike[str] | None) -> Path | None:
+def _find(name: str, fallbacks: tuple[str, ...]) -> str | None:
+    hit = shutil.which(name)
+    if hit:
+        return hit
+    if os.path.isabs(name) and os.access(name, os.X_OK):
+        return name
+    for fb in fallbacks:
+        if os.access(fb, os.X_OK):
+            return fb
+    return None
+
+
+def _config_files(path: str | os.PathLike[str] | None) -> list[Path]:
     if path:
         p = Path(path)
-        return p if p.exists() else None
-    for name in ("econoclast.local.yaml", "econoclast.yaml", "econoclast.yml"):
+        return [p] if p.exists() else []
+    from econoclast.case.store import home
+
+    out = []
+    user = home() / "config.yaml"
+    if user.exists():
+        out.append(user)
+    for name in ("econoclast.yaml", "econoclast.yml"):
         p = Path.cwd() / name
         if p.exists():
-            return p
-    return None
+            out.append(p)
+            break
+    return out

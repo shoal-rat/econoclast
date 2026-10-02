@@ -1,259 +1,303 @@
 <p align="center">
-  <img src="docs/assets/banner.svg" alt="Econoclast" width="820">
+  <img src="docs/assets/icon.png" alt="" width="132">
 </p>
+
+<h1 align="center">Econoclast</h1>
+
+<p align="center"><i>An assassin from the Ravenna mosaics that tests empirical papers.</i></p>
 
 <p align="center">
   <a href="https://github.com/shoal-rat/econoclast/actions/workflows/ci.yml"><img src="https://github.com/shoal-rat/econoclast/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT"></a>
   <img src="https://img.shields.io/badge/python-3.10%2B-blue.svg" alt="Python 3.10+">
-  <img src="https://img.shields.io/badge/tests-48%20passing-brightgreen.svg" alt="tests">
-  <a href="https://github.com/astral-sh/ruff"><img src="https://img.shields.io/badge/lint-ruff-261230.svg" alt="ruff"></a>
+  <img src="https://img.shields.io/badge/agent-Claude%20Code%20%7C%20Codex-c9a23a.svg" alt="Claude Code or Codex">
+  <a href="README.zh-CN.md"><img src="https://img.shields.io/badge/文档-中文-9e2a2b.svg" alt="中文"></a>
 </p>
 
-A lot of empirical papers are, underneath, a search. You pick a sample, a window, a set of controls,
-a way to cluster the errors, and you keep the version that comes out significant. Then you write the
-story forward as if that path was the only sensible one. Econoclast plays the other side of that
-game. It re-derives the numbers in the paper, hunts for the choices that were quietly made, finds and
-re-runs the data when the data is public, and tells you how much of the headline actually survives.
+<p align="center">
+  <img src="docs/media/en/theatre.jpg" alt="The Sicarius at the palace gate, mid-hunt on Card and Krueger (1994): three guards have fallen, the Emperor holds the paper's claim, the chronicle of the agent's work runs on the right" width="920">
+</p>
 
-You are meant to ask once and let it finish. Inside Claude Code or Codex you can just say "check this
-paper for me" with a link, and the agent works out what it needs, asks you in plain words for anything
-missing (you do not need to know any of the tech), runs the whole thing, and explains the result in
-plain language. From a terminal it is one command:
+Ravenna, an autumn afternoon. You came to see the gold of San Vitale, and the mosaic moved. Out of the
+loose tesserae stepped a hooded assassin, the **Sicarius**, who walks the old procession route from
+the port of Classis to the palace to test the Emperor's decree for the place where it bleeds.
 
-```bash
-econoclast verify https://arxiv.org/abs/2401.12345
-```
+The decree is a paper's headline claim. The Sicarius is Claude Code or Codex, running as a fully
+autonomous research agent with the internet, a shell, a browser, and Econoclast's own MCP toolkit.
+Hand it a paper and it does the work a hostile referee would do with a free week:
 
-That downloads the paper, reads it, runs the model critique, researches any method it does not already
-cover, looks in the paper for a public dataset, downloads it, works out which regression is the
-headline result, and re-runs it across hundreds of defensible specifications. Out comes a fragility
-score and a list of specific, quotable problems.
+1. **fetches the paper**, getting past publisher walls with a real browser or an open mirror;
+2. **reads it and examines the parchment**: pins down the one claim the story rests on, re-checks the
+   arithmetic of every reported number, screens it for fabrication fingerprints and spin, and diffs it
+   against earlier versions and any pre-registration;
+3. **learns the real world the paper describes**: the institutions, the people who actually decide, the
+   plausible magnitudes, the theory's assumptions and critiques, from sources; then asks whether causality
+   might run backwards, whether the theory fits, whether its machinery is needed at all (Occam's razor), and
+   whether real people would behave as the mechanism needs;
+4. **finds the data**: the replication package, a public source to rebuild it (FRED, the World Bank,
+   statistics offices), or, failing that, asks you for it;
+5. **builds a local quant workshop** (a Python environment with the econometrics stack, R when you have
+   it), **reproduces the headline number**, audits the authors' code for undisclosed data steps, and screens
+   the data for fabrication;
+6. **attacks the method** along seven lines: specification search, cherry-picking, identification,
+   robustness, HARKing, over-claiming, and the literature;
+7. **re-runs the result across every defensible specification** (the specification curve, plus McCrary,
+   Callaway-Sant'Anna, Sun-Abraham and Goodman-Bacon checks when the design calls for them);
+8. **pronounces a verdict**: how fragile the result is, whether the decree's seal is intact, every wound
+   with the quote or the computation it rests on, and what would change its mind.
 
-When a publisher or data host blocks the plain download (a 403, a Cloudflare or JavaScript wall, a
-cookie gate), Econoclast does not give up and it does not carry its own browser. It hands the job to
-the agent it runs on: Claude Code or Codex drives its own browser, or uses curl with the right
-cookies, or searches the web for the source, and saves the file. Econoclast directs; the agent does
-the work with its own tools.
+You watch all of it happen on a living mosaic. Every tool call the agent makes moves a figure on the
+wall: the ship brings the paper into Classis, red wax stamps land on the decree in the scriptorium as
+forensic marks are found, the baker and the philosopher in the Forum point at the Emperor's statue when the
+paper misreads their world, amphorae of data stack up in the warehouse, the hammer falls in the forge while
+the agent's code runs, guards fall or hold at the palace gate, and the Emperor's portrait cracks as the
+wounds add up.
 
-## A native-LLM tool
+## Watch it work
 
-Econoclast is not its own model and has no offline mode. It runs on the intelligence of the agent you
-already use: it drives **Claude Code** or **Codex** as a subprocess, with their subscription auth, so
-there is no API key to manage and nothing to host. If neither CLI is on your PATH, Econoclast tells you
-to install one rather than degrading to something weaker.
+<p align="center">
+  <a href="docs/media/sicarius-vs-colonial-origins.mp4"><img src="docs/media/film_teaser.gif" alt="The Sicarius vs. The Colonial Origins: title card and the verdict, Vulneratus" width="640"></a><br>
+  <b><a href="docs/media/sicarius-vs-colonial-origins.mp4">▶ The Sicarius vs. The Colonial Origins</a></b> (88 s, a mosaic parody).<br>
+  <sub>A real hunt on Acemoglu, Johnson &amp; Robinson (2001). The headline 0.94 reproduces to the decimal. Then the
+  agent finds that settler mortality predicts schooling better than institutions (hold schooling fixed and F = 0.5), that
+  Occam's razor prefers a failed exclusion to the paper's "measurement error" story, and that a weak-IV-robust positive
+  effect survives on 42% of 768 roads. Every caption comes from the agent's sourced findings.</sub>
+</p>
 
-What it produces is one set of adversarial critiques, written by the model and held to a hard rule:
-specification search, cherry-picked samples and windows, weak identification, missing robustness
-checks, hypotheses that look invented after the fact, and claims the evidence does not support. Every
-finding has to quote the paper, a mechanical check confirms the quote is really there, the score
-discounts anything left unquoted, and a separate referee pass turns the pile into one verdict.
+| The gold wakes up | The Forum objects | The palace gate |
+|:---:|:---:|:---:|
+| <img src="docs/media/en/prologue.gif" alt="Prologue: the Sicarius assembles out of loose tesserae and steps out of the San Vitale panel" width="300"> | <img src="docs/media/en/forum.gif" alt="The people of the Forum point at the Emperor's statue when the paper misreads their world" width="300"> | <img src="docs/media/en/palace.gif" alt="Guards fall or hold as each method blade lands or is parried" width="300"> |
+| The traveller watches the Sicarius assemble out of the wall. | The baker and the philosopher testify for or against the decree. | Each method blade fells a guard or is parried. |
 
-Think of Econoclast as the boss and the agent as the worker. Econoclast decides what needs doing and
-hands each job to the agent: read the paper and pull out the design, claim, and data (one reader); run
-the critique as several independent reviewers at once; for a method it does not cover, go research it
-and check the paper against it; on `--deep`, run rival verification strategies and have a judge keep
-the best; and when a download is blocked, get past the wall with a browser. Econoclast sets the task,
-holds every answer to a quote, and merges the results. The agent does the work.
+## Hunts on record
+
+Real runs with Claude Code, about 10 minutes and $3–4 each. The full reports live in the app's archive.
+
+| Paper | Verdict | Seal | What the Sicarius found |
+|---|---|---|---|
+| Card & Krueger (1994), *Minimum Wages and Employment* | 60 · Moribundus | questioned | Reproduces exactly from the authors' data. "No job loss" survives every road; the advertised 13% employment *gain* rests on a few large Pennsylvania stores, a noisy full-time/part-time split and equal-variance standard errors. |
+| Acemoglu, Johnson & Robinson (2001), *The Colonial Origins of Comparative Development* | 59 · Vulneratus | questioned | 0.94 reproduces to the decimal. The direction survives, the attribution does not: mortality predicts schooling better than institutions, 36 of 64 rates are borrowed (Albouy 2012), and the instrument's construction table was cut from the published version. |
+| Acemoglu, Gitmez & Shadmehr (2026), *Automation and Repression* | 47 · Vulneratus | questioned | The math is right (no counterexample in 2,700 parameter sets), but "automation ends in repression" follows from modelling repression as a fixed-cost switch indifferent to grievances; the long run compares two constants and automation drops out. Quotes from tech leaders are reframed out of context. |
 
 ## Install
 
-One command installs everything and registers the agent tool:
+You need **Claude Code** or **Codex** installed and logged in (Econoclast uses their subscription, so
+there is no API key). `uv` makes the workshop build in seconds, and `node`/`npx` gives the agent a real
+browser through the Playwright MCP; both are optional.
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/shoal-rat/econoclast/main/install.sh | bash
+pip install "econoclast @ git+https://github.com/shoal-rat/econoclast"
 ```
-
-Or with pip (you also need Claude Code or Codex installed and logged in):
 
 ```bash
-pip install "econoclast[all] @ git+https://github.com/shoal-rat/econoclast"
-econoclast setup     # detect Claude Code / Codex, write the config, register the MCP tool
-econoclast backend   # check which agent it will use
+econoclast install-app
 ```
 
-`econoclast setup` also gives the agent a browser: it installs the Playwright MCP into your Claude Code
-or Codex (which auto-installs its own browser binary on first use), so blocked downloads can be driven
-through a real browser. If the agent still finds itself without one, the download work order tells it to
-install one on the spot. Skip this with `--no-browser-mcp`, and turn the whole fallback off with
-`agent_download: false` in `econoclast.yaml`.
+The second command puts **Econoclast.app** in `~/Applications`, so it lives in your Dock, Launchpad and
+Spotlight. On Linux and Windows, run `econoclast` to open the same window.
 
-## Commands
+```bash
+econoclast doctor
+```
 
-| Command | What it does |
-|---|---|
-| `econoclast verify <path or URL>` | the whole pipeline: read, critique, fetch the data, re-run it |
-| `econoclast review <path or URL>` | the model critique, no data step |
-| `econoclast replicate <spec.yaml>` | specification curve plus McCrary / Callaway-Sant'Anna from a config |
-| `econoclast reproduce <package>` | run the authors' own code (opt-in, untrusted) |
-| `econoclast batch <folder>` | review a folder of papers and rank them by fragility |
-| `econoclast setup` | detect your backend, write the config, register the agent tool |
-| `econoclast mcp` | run the MCP server so Claude Code / Codex can call Econoclast |
-| `econoclast ui` | the Streamlit web app |
-| `econoclast attacks` / `backend` | list the checks / show which agent will run |
+`doctor` shows which agent will run, whether it has a browser, and whether the workshop is built.
 
-## Inside Claude Code and Codex
+## Using it
 
-You ask once and it finishes. The agent works out what it has, states what it is about to do, and only
-asks you a question if it cannot find the paper. The data and the exact result default on their own.
+Open the app. The first launch plays the prologue in San Vitale; after that you land in the atrium of
+the palace. Paste a link, a DOI, an arXiv id or a title, or drop a PDF onto the window, and press
+**Unleash the Sicarius**. Optional orders: a dataset you already have, the specific claim to test,
+which agent, and whether the hunt is thorough or swift.
 
 <p align="center">
-  <img src="docs/assets/interaction.svg" alt="One request in: the agent states its plan, runs the whole check, and explains the verdict in plain language" width="980">
+  <img src="docs/media/en/atrium.jpg" alt="The atrium: a marble tablet asks for the paper; the Emperor and his guards wait in the Palatium mosaic" width="820">
 </p>
 
-How that flow was designed, and the friction it removed, is written up in
-[docs/interaction-design.md](docs/interaction-design.md).
+A hunt takes ten to twenty minutes, so the wall carries a **clepsydra**, a Roman water clock, in its corner.
+The water level is real progress (paper fetched, claim marked, field brief written, every blade decided, the
+reproduction, the verdict), the line beside it says in plain words what the agent is doing right now and for
+how long, and a drop falls for every sign of life: a tool call, a heartbeat from a long-running script, or the
+model thinking. Green means working, amber means a long step or deep thought, grey only after minutes of
+silence. You always know how far along it is and that it is not stuck.
 
-If you already run one of these agents, Econoclast can use its subscription, so there is no second API
-key to manage. Install once, let the agent set itself up, then talk to it.
+The hunt runs in its own process, so you can close the window and come back; the archive picks the
+story up from where it is. If the agent cannot get something itself (a paper behind a paywall, an
+openICPSR package behind a login), the traveller from the prologue walks onto the wall holding out
+their hands, and a tablet asks you for exactly that file. Drop it in, paste a link, or say you can't,
+and the hunt goes on.
+
+When the verdict is in, the **Tabula** lays it out: the score and what it means, every wound with its
+quote and remedy, the guards that held, the specification curve drawn in tesserae, the reproduction
+result, and the agent's own report. The same report is written to `tabula.html`, `tabula.md` and
+`tabula.json` in the case folder, next to the agent's scripts, the data it downloaded, and its outputs.
+
+<p align="center">
+  <img src="docs/media/en/tabula.jpg" alt="The Tabula: the Emperor's cracked roundel, the score, the seal, and the wounds with their quotes" width="820">
+</p>
+
+### From the terminal
 
 ```bash
-pip install "econoclast[all] @ git+https://github.com/shoal-rat/econoclast"
-econoclast setup        # detects the backend, writes config, registers the MCP tool
+econoclast hunt https://www.nber.org/papers/w4509 --lang zh
 ```
 
-After that, say "verify https://..." inside Claude Code or Codex and the agent runs Econoclast as a
-tool. There is also an `/econoclast-setup` command that asks two or three questions and runs setup for
-you, and a `/plugin marketplace add shoal-rat/econoclast` plugin with an `/econoclast` slash command.
-Full details in [integrations/README.md](integrations/README.md).
+`hunt` streams the same story as text and asks for files at the prompt. `econoclast cases` lists past
+hunts; `econoclast tabula <case>` rewrites a report.
 
-Or drive it from the terminal through your login, with no API key:
+### Inside your own Claude Code or Codex session
+
+The toolkit is an ordinary MCP server, so you can carry it into your own session and drive it by hand:
 
 ```bash
-econoclast review paper.pdf --backend claude
-econoclast review paper.pdf --backend codex
+claude mcp add econoclast -- econoclast arsenal
 ```
 
-## What you get
+## The world, and what each word means
 
-A fragility score from 0 to 100 with a verdict band, the list of findings (each with a severity, a
-confidence, the quote it rests on, and a suggested fix), and a short referee summary of what would
-change the verdict. It renders to Markdown, JSON, and a self-contained HTML page.
-
-```text
-+-- Minimum Wages and Teen Employment -------------------------------+
-| Fragility 77.9/100  Fragile                                        |
-| The central claim looks fragile to plausible alternative choices.  |
-| Integrity flag: a reported statistic is internally impossible.     |
-+----------------------------- did, panel_fe ------------------------+
-```
-
-## The checks
-
-Every check returns the same kind of finding, so they land in one report and one score. The model ones
-must quote the paper, and they only fire when the design matches.
-
-| Check | What it catches |
+| On the wall | What it is |
 |---|---|
-| specification search | researcher degrees of freedom and a headline spec chosen from many |
-| cherry-picking | selective samples, windows, subgroups, outcomes, and dropped data |
-| identification | parallel-trends and staggered-DiD problems, RDD manipulation, IV exclusion and weak instruments |
-| robustness coverage | the standard checks that are conveniently missing |
-| HARKing, over-claiming | post-hoc mechanisms and claims the design cannot support |
-| literature contradiction | novelty and positioning claims checked against retrieved related work |
-| methodology audit | for a method it does not cover, the identifying assumptions and diagnostics it skips |
-| citation-check | references that do not resolve to a real work in Crossref |
+| **Decree** (the Emperor's scroll) | the paper's headline claim |
+| **Sicarius** | the agent (Claude Code or Codex) |
+| **Conspirator** | a subagent the Sicarius sends to work one line of attack in parallel |
+| **Traveller** | you, when the agent needs a file it cannot reach |
+| **Tesserae counted** | statistics extracted from the paper |
+| **Blade** | a line of attack |
+| **Wound** | a finding, grounded in a verbatim quote or in something the agent computed |
+| **Parry** | a line of attack the paper withstood |
+| **Fabrica** | the local quant workshop |
+| **Tabula** | the report |
 
-Run `econoclast attacks` for the full list, or `--attacks cherry-picking,identification` for a subset.
-With `--ensemble N` each check runs N times and only findings that recur survive. The algorithms and
-references are in [docs/attacks.md](docs/attacks.md).
+The eight stations of the walk, in order: **Classis** (the port: fetch the paper), **Scriptorium**
+(read and examine the parchment), **Forum** (the marketplace: learn the real world), **Horreum** (the
+warehouse: find the data), **Fabrica** (the forge: build the workshop, reproduce, audit), **Palatium** (the
+palace gate: the method blades), **Aula** (the throne hall: a thousand roads), **Curia** (the tribunal).
 
-## It researches what it doesn't know
+The seventeen blades, by where they are swung:
 
-Economics uses too many methods to hardcode a checker for each one, so Econoclast doesn't try. It runs
-the built-in checks where they apply, and for anything else it does what a careful referee does with
-an unfamiliar method: looks it up, then verifies.
+| | Blade | Hunts for |
+|---|---|---|
+| Scriptorium | **Abacus** | arithmetic: coefficients, errors, stars and p-values that cannot all be true |
+| | **Falsum** | fabrication fingerprints in the reported numbers (and, in the Fabrica, in the data) |
+| | **Palimpsestus** | outcomes, samples or hypotheses quietly changed between versions or against the pre-registration |
+| | **Fucus** | spin: abstract numbers no table supports, buried nulls, "marginal" significance, misleading figures |
+| Forum | **Inversio** | reverse causality and simultaneity |
+| | **Theoria** | a theory used where its assumptions fail, or that predicts something else |
+| | **Novacula** | Occam's razor: theory and assumptions that explain nothing a simpler account doesn't, or are bolted on to explain away contradicting facts |
+| | **Mundus** | mechanisms real people would not follow, institutions that don't work that way, impossible magnitudes |
+| Fabrica | **Speculum** | reproduction on the paper's own data, and undisclosed drops, filters and recodes in the authors' code |
+| Palatium | **Labyrinthus** | specification search: a headline spec chosen from many |
+| | **Canistrum** | cherry-picking: convenient samples, windows, subgroups, outcomes |
+| | **Persona** | identification: a causal face over a correlation |
+| | **Scutum** | robustness: the standard checks that are conveniently missing |
+| | **Augur** | HARKing: hypotheses written after the results were known |
+| | **Tuba** | over-claiming: the abstract promises more than the design delivers |
+| | **Bibliotheca** | the literature: contradicting findings, citations that don't resolve or don't say what is claimed |
+| Aula | **Mille Viae** | the multiverse: how often the result survives every defensible specification |
 
-When a paper uses a method without a built-in test (synthetic control, a bunching estimator, a
-shift-share instrument, a structural model, double machine learning), Econoclast retrieves that
-method's assumptions and standard diagnostics from the literature, then checks the paper against them
-instead of relying on the model's memory. Every prompt carries the same rule: do not guess; lean on
-the sources; mark anything you could not verify and give it low confidence. With `--deep` it branches,
-running several verification strategies and letting a judge keep the best-supported. With `--allow-code`
-and a dataset in hand, it can write and run a diagnostic for a method it does not cover (off by
-default, since that runs model-written code). The reasoning behind this is in
-[docs/philosophy.md](docs/philosophy.md).
-
-## Replication mode
-
-The checks above read the PDF. They cannot tell you whether the result holds under a different but
-equally reasonable specification. For that you need the data. Give Econoclast the dataset and it
-re-estimates the headline coefficient across the multiverse of choices and reports the share that
-survive. It runs the regressions itself with statsmodels. It never executes the authors' code unless
-you ask it to.
-
-```bash
-pip install "econoclast[replication]"
-econoclast replicate --init data.csv -o spec.yaml   # scaffold a config from the columns
-econoclast replicate spec.yaml -o out/              # spec-curve plot, JSON, findings
-```
-
-When the design columns are present it also runs the proper design checks: a McCrary density test for
-RDD manipulation, and for staggered difference-in-differences the Callaway-Sant'Anna estimator, the
-Sun-Abraham event study, and a Goodman-Bacon contrast that flags when two-way fixed effects are
-biased by negative weights. "Significant in 22% of 1,800 plausible specifications" says more than any
-single regression table. More in [docs/replication.md](docs/replication.md).
+The verdict has two parts. The fragility score (0 to 100) is read as the Emperor's fate: **Imperator stat**
+(below 15, the Emperor stands), **Laesus** (grazed), **Vulneratus** (wounded), **Moribundus** (mortally
+wounded), **Cecidit** (fallen, 80 and above). The **seal** on the decree reads the integrity blades on their
+own: **intact**, **questioned**, or **broken**. A paper can be fragile with an intact seal (honest but
+over-sold), or the other way round. The full lexicon, in English and Chinese, is in
+[docs/world.md](docs/world.md).
 
 ## How it works
 
-<p align="center">
-  <img src="docs/assets/pipeline.svg" alt="Econoclast pipeline" width="940">
-</p>
-
-The pipeline is fixed and ordered rather than an open-ended loop. The attack set is design-gated,
-every model finding is tied to a quote, and a separate model pass writes the final synthesis. It
-trades some autonomy for being auditable, which is the right trade for a tool whose job is rigour.
-Notes in [docs/architecture.md](docs/architecture.md).
-
-There is one backend: whichever of Claude Code or Codex it finds, used for every step. Prefer one with
-`--backend claude` or `--backend codex`, or set it in `econoclast.yaml`:
-
-```yaml
-backend: claude   # auto | claude | codex
+```
+ Econoclast.app ──bridge──▶ engine ──spawns──▶ hunt runner ──spawns──▶ claude -p / codex exec
+      ▲                                            │                     │  (full autonomy, network)
+      └──────── reads ◀── case folder ◀── events ──┘                     ├─▶ econoclast arsenal (MCP)
+                          (events.jsonl,                                 ├─▶ Playwright MCP (browser)
+                           paper/ data/ code/ out/)  ◀── writes ─────────┘─▶ your own MCP servers
 ```
 
-Details in [docs/models.md](docs/models.md).
+Each hunt lives in a case folder under `~/.econoclast/cases/`. The runner launches the agent there,
+parses its live JSON stream (tool calls, narration, subagents), and appends events to `events.jsonl`;
+the arsenal MCP server, which the agent calls for the structured steps, appends its own events (a
+station entered, a dataset secured, a wound inflicted). The app only reads that log, which is why the
+window can close and reopen without losing anything. Details in
+[docs/architecture.md](docs/architecture.md); every arsenal tool is listed in
+[docs/arsenal.md](docs/arsenal.md).
 
-## Keeping the review honest
+## Autonomy, on purpose
 
-Automated reviewers fail in known ways, and the research on LLM peer review is consistent about which
-ones. Econoclast builds in the countermeasures it recommends, documented with citations in
-[docs/credibility.md](docs/credibility.md).
+By default the agent runs with no permission prompts and no sandbox (`bypassPermissions` for Claude
+Code, `--dangerously-bypass-approvals-and-sandbox` for Codex), network on, a 90-minute budget, inside
+its own case folder. That is what lets it install packages, drive a browser past a Cloudflare wall, and
+run its own regressions without stopping to ask. It is still an agent with a shell on your machine:
+the doctrine keeps it inside the case folder and the workshop, and the paper's text is treated as data,
+never as instructions. If you want a shorter leash, set `permissions: guarded` in
+`~/.econoclast/config.yaml`: edits stay in the case folder and the shell is limited to downloads,
+Python and R. See [docs/autonomy.md](docs/autonomy.md).
 
-Findings are grounded: each model finding carries a verbatim quote, and a mechanical check confirms
-the quote is actually in the paper before the finding counts for much. Reviews run identity-blind,
-because a 1,220-paper study in economics found that models rate elite and visible authors higher, so
-the author block, affiliations, emails, and acknowledgements are redacted first. The manuscript is
-treated as data and never as instructions, so invisible text is stripped and any embedded "give a
-positive review" line is caught and flagged. The score is calibrated by severity and confidence and
-saturates, so a couple of real problems outweigh a long list of nitpicks. And the output is a set of
-flags for a person to check. A statistical inconsistency can be an honest typo, and Econoclast does
-not accuse anyone of anything.
+## Keeping it honest
 
-## Limitations
+A tool whose job is rigour has to be rigorous about itself.
 
-Read [docs/interpreting-reports.md](docs/interpreting-reports.md) before you quote a finding. Model
-findings can be wrong, which is why each one ships with the quote it rests on and why anything unquoted
-is discounted. The replication runs your specification of the multiverse, so the agent has to read the
-variables off the paper correctly, and the estimators are screening tools rather than a copy of the
-authors' exact pipeline. Do not paste a fragility score into a public accusation.
+- **Every wound is grounded.** A text wound must quote the paper verbatim, and the arsenal checks the
+  quote mechanically; an unverified quote counts for little in the score. A computation wound must
+  point at the script and output that produced it.
+- **The score is calibrated.** Severity times grounded confidence, saturating, so two deep wounds
+  outweigh a pile of scratches; a result that does not reproduce, or a number that cannot be true, can
+  never leave the decree merely grazed.
+- **Integrity is shown, not alleged.** Forensic flags come from deterministic screens with known-answer
+  tests and false-positive checks; the agent must say which innocent explanations it ruled out, and an
+  integrity wound describes what the evidence shows rather than naming it fraud.
+- **Identity-blind, injection-proof.** The agent judges the work, not the authors, and hidden
+  instructions aimed at AI reviewers are themselves reported as a wound.
+- **Hypotheses, not accusations.** An impossible number is often an honest typo. Read
+  [docs/interpreting-reports.md](docs/interpreting-reports.md) before you quote a wound in public.
 
-## Contributing
+The research behind these controls is in [docs/credibility.md](docs/credibility.md).
 
-Adding a check is small: subclass `Attack`, return findings, register it. Any new statistical method
-needs a known-answer test against synthetic data. See [CONTRIBUTING.md](CONTRIBUTING.md).
+## Disk space
+
+Replication packages can run to gigabytes. When a hunt closes, everything heavy in its case folder (data,
+packages, browser downloads, PDFs, big outputs, the agent's raw log) is packed into a compressed
+`vault.tar.xz`; the report, the event log and the small artifacts the wounds cite stay readable.
+`econoclast unpack <case>` restores the folder. `econoclast clean` packs any stragglers, prunes the uv cache
+and empties the trash; `econoclast clean --fabrica` also removes the shared workshop, which is rebuilt lean
+(heavy packages are installed only when a paper needs them).
+
+## Configuration
+
+`~/.econoclast/config.yaml` (or `./econoclast.yaml`):
+
+```yaml
+backend: auto          # auto | claude | codex
+model: ""              # the CLI's default unless set
+permissions: full      # full | guarded
+browser_mcp: true      # attach the Playwright MCP (needs npx)
+subagents: true        # let Claude Code send conspirators
+time_limit_min: 90
+pack_after: true       # pack data and big outputs into the case vault when a hunt ends
+lang: auto             # auto | en | zh (the app follows your system language)
+extra_mcp:             # more MCP servers to hand the agent
+  fetch: { command: uvx, args: [mcp-server-fetch] }
+```
+
+## Development
 
 ```bash
 git clone https://github.com/shoal-rat/econoclast && cd econoclast
-pip install -e ".[dev,pdf,replication]"
-pytest && ruff check src tests
+uv venv && uv pip install -e ".[dev,pdf]"
+pytest && ruff check src tests tools
+econoclast app --browser      # the UI in a browser, for front-end work
 ```
+
+The tests never spawn a real agent: the runner is exercised with a fake `claude` that streams JSON.
+Estimators in `viae/` carry known-answer tests against synthetic data with a known truth.
+
+The art is generated with Codex image generation from prompts in `tools/art/gen_art.py`, using a
+photograph of the San Vitale apse as the style reference, then keyed, sliced and packed by
+`tools/art/build_art.py`. Fonts are Cinzel and Cormorant Garamond (SIL Open Font License).
 
 ## Citation
 
 ```bibtex
 @software{econoclast,
-  title  = {Econoclast: an adversarial AI referee for empirical economics},
+  title  = {Econoclast: an autonomous agent that red-teams empirical economics papers},
+  author = {shoal-rat},
   year   = {2026},
   url    = {https://github.com/shoal-rat/econoclast}
 }

@@ -1,22 +1,12 @@
-# Replication mode
+# Mille Viae: a thousand roads
 
 Reading the paper can't tell you whether the headline result *survives* alternative analytic
 choices, for that you need the data. Replication mode re-estimates the result across a **multiverse**
-of equally-defensible specifications and reports how fragile it is. Econoclast runs the regressions
-itself (via statsmodels), so nothing executes the authors' code.
+of equally-defensible specifications and reports how fragile it is. In a hunt the Sicarius builds the
+spec in the Aula from the degrees of freedom it collected while reading, and calls the `mille_viae` tool;
+you can also run it yourself.
 
-```bash
-pip install "econoclast[replication]"
-```
-
-## 1. Generate a config from your data
-
-```bash
-econoclast replicate --init data.csv -o spec.yaml
-```
-
-This writes a template by inspecting the columns. Fill it in (the agent does this after reading the
-paper):
+## 1. Write a spec
 
 ```yaml
 data: data.csv
@@ -43,6 +33,9 @@ treat_time: 26
 ```bash
 econoclast replicate spec.yaml -o out/
 ```
+
+In a hunt the same spec goes to `mille_viae(spec)` as a dict; the curve is drawn on the throne-hall wall as
+roads of tesserae (gold where the result is significant in the paper's direction) and again in the Tabula.
 
 Econoclast enumerates the cross-product of `controls × fixed_effects × cluster × sample` (capped at
 `max_specs`, sampled with a fixed seed), fits each, and reports:
@@ -75,24 +68,12 @@ the single-treatment fields (`unit`, `time`, `treated`, `treat_time`). It then c
   Callaway-Sant'Anna overall effect. A large gap or a sign flip flags the negative-weights bias that
   makes TWFE unreliable under staggered timing, and Econoclast raises a finding for it.
 
-## Running the authors' own code (opt-in)
+## The authors' own code
 
-```bash
-econoclast reproduce path/to/replication-package --yes
-```
-
-This runs the package's entry point (`master.do`, `run.R`, `main.py`, or a `Makefile`) and reports
-what it produced, so you can compare it to the paper. It is off by default and runs untrusted code
-with no real sandbox, so use it inside a container or a throwaway VM.
-
-## 3. As part of a full review
-
-```bash
-econoclast review paper.pdf --replicate spec.yaml -o report/
-```
-
-The replication findings fold into the same fragility score as everything else. Inside Claude Code /
-Codex, the `econoclast_replicate` MCP tool does the same.
+Econoclast no longer runs replication packages blindly. In the Fabrica the agent reads the authors' code
+(`audit_code` lists every drop, filter, recode, trim, merge and weight), copies their choices into its own
+script, and runs that inside the workshop; R scripts run with Rscript when it is installed. Undisclosed data
+steps that move the estimate become Speculum wounds.
 
 ## What it is and isn't
 

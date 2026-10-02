@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from econoclast.ingest.claims import extract_statistics
+from econoclast.tesserae.claims import extract_statistics
 
 
 def test_extracts_test_stat_with_p():

@@ -1,0 +1,157 @@
+// Interface strings. World names (stations, blades, verdicts) come from the engine's lexicon.
+
+const S = {
+  en: {
+    brand_sub: "Ravenna", archive: "Archive", prologue: "Prologue", skip: "Skip ›",
+    decree: "The decree", wounds: "Wounds", fragility: "Fragility", abort: "Call off", chronicle: "Chronicle",
+    offer_title: "Bring a decree to the Sicarius",
+    offer_lede: "Every paper is an emperor's decree. Name one, and the assassin will find where it bleeds.",
+    paper_label: "The paper", paper_ph: "Link, DOI, arXiv id, or exact title",
+    pick_pdf: "Choose a PDF…", pick_data: "Add a dataset…", pick_file: "Choose a file…",
+    more: "More orders", claim_label: "Claim to test (optional)", claim_ph: "Default: the paper's headline result",
+    agent: "Agent", depth: "Depth", thorough: "Thorough", swift: "Swift", auto: "Auto",
+    unleash: "Unleash the Sicarius", demo: "Watch a demonstration",
+    no_paper: "Name a paper or choose a file first.",
+    no_agent: "Neither Claude Code nor Codex is installed. Install one, log in, and reopen Econoclast.",
+    recent: "Recent hunts",
+    plea_title: "The Sicarius asks for your help", plea_drop: "Drop the file here",
+    plea_url: "…or a link", plea_send: "Hand it over", plea_decline: "I can't get it",
+    drop_hint: "Drop a paper anywhere", running: "hunting", done: "judged", failed: "failed",
+    aborted: "called off", interrupted: "interrupted", starting: "setting out", new: "new",
+    read_tabula: "Read the Tabula", replay: "Replay the hunt", open_html: "Open the HTML report",
+    reveal: "Show the case folder", back: "Back to the atrium", new_hunt: "New hunt",
+    headline: "Verdict", assessment: "Assessment", the_decree: "The decree", w_title: "Wounds",
+    p_title: "Parried", viae_title: "A thousand roads", spec_title: "The mirror (reproduction)",
+    change: "What would change the verdict", survived: "What survived", final_msg: "The Sicarius's report",
+    quote_unverified: "quote not found in the paper", remedy: "Remedy", artifacts: "Artifacts",
+    conf: "confidence", none_yet: "No wounds.", archive_title: "The archive", empty_archive: "No hunts yet.",
+    paper_val: "paper", ours: "ours", match: "match", close: "close", mismatch: "mismatch",
+    roads: "roads", sig_share: "significant in the paper's direction",
+    hunt_failed: "The hunt stopped before the verdict.", hunt_aborted: "The hunt was called off.",
+    plea_card: "Asks the traveller", plea_answered: "The traveller answered", plea_declined: "The traveller could not",
+    confirm_abort: "Call off the Sicarius? The hunt so far stays in the archive.",
+    agent_missing: "No agent found", agent_ok: "Agent ready",
+    cost: "cost", turns: "turns", tokens: "tokens", demo_banner: "Demonstration · a recorded hunt",
+    pro1k: "RAVENNA", pro1: "An autumn afternoon. You came to see the gold of San Vitale.",
+    pro2k: "SAN VITALE", pro2: "Fifteen centuries of glass and stone, every tessera set by hand.",
+    pro3k: "THEN", pro3: "the gold began to move.",
+    pro4k: "SICARIUS", pro4: "Out of the loose tesserae stepped an assassin.",
+    pro5: "Bring me a decree, and I will find where it bleeds.",
+    pro6k: "ECONOCLAST", pro6: "Every paper is an emperor's decree. Every decree has a weak point.",
+    sicarius: "Sicarius", traveller: "Traveller", conspirator: "Conspirator",
+    tesserae_counted: "tesserae counted", flags: "flags", rows: "rows", cols: "columns",
+    forge_ready: "The workshop is ready", forge_run: "Running", data_in: "Data secured", data_fail: "Download refused",
+    paper_in: "The decree has arrived", paper_fail: "Blocked at the gate",
+    vault: "Packed into the vault", still_running: "still running",
+    act_read: "Reading", act_write: "Writing", act_run: "Running", act_fetch: "Fetching", act_search: "Searching",
+    act_browse: "Browsing", act_spawn: "Sending a conspirator", act_plan: "Planning", act_tool: "Using", act_verdict: "Pronouncing the verdict",
+    tool_proclaim: "Entering the next station", tool_fetch_paper: "Fetching the paper", tool_read_paper: "Reading the paper",
+    tool_mark_target: "Marking the decree", tool_verify_quote: "Checking a quote against the paper",
+    tool_abacus: "Re-checking the arithmetic", tool_forensics_paper: "Screening the numbers for forgery",
+    tool_compare_versions: "Comparing versions of the paper", tool_field_notes: "Writing the field brief",
+    tool_novacula: "Shaving the model with Occam's razor", tool_search_literature: "Searching the literature",
+    tool_check_references: "Checking the references", tool_find_data_links: "Looking for the data",
+    tool_fetch_dataset: "Downloading the data", tool_public_series: "Pulling public data", tool_inspect_dataset: "Inspecting the data",
+    tool_fabrica_build: "Building the quant workshop", tool_fabrica_run: "Running code in the workshop",
+    tool_reproduce: "Recording the reproduction", tool_audit_code: "Auditing the authors' code",
+    tool_forensics_data: "Screening the data for forgery", tool_mille_viae: "Running a thousand specifications",
+    tool_inflict_wound: "Recording a wound", tool_parry: "Recording a parry", tool_plea: "Asking you for help",
+    tool_pronounce_verdict: "Pronouncing the verdict",
+    cl_working: "working", cl_thinking: "thinking", cl_long: "long step", cl_quiet: "quiet for", cl_done: "finished", cl_stopped: "stopped", seal: "Seal", field_brief: "field brief", data_screen: "data screen", paper_screen: "paper screen",
+    code_audit: "code audit", rewritten: "rewritten", removed: "removed", added: "added", changed: "changes",
+    data_steps: "data steps", files: "files", integrity: "Integrity", real_world: "The real world",
+    claimed: "The mechanism the paper claims", real: "How the real actors behave", institutions: "Institutions and timing",
+    magnitudes: "Magnitudes", theory: "Theory", rivals: "Rival explanations", sources: "Sources",
+    integrity_note: "Each mark is an observation for a human to check, never an accusation.",
+  },
+  zh: {
+    brand_sub: "拉文纳", archive: "卷宗", prologue: "序幕", skip: "跳过 ›",
+    decree: "诏书", wounds: "伤口", fragility: "脆弱度", abort: "召回刺客", chronicle: "编年记",
+    offer_title: "把一道诏书交给刺客",
+    offer_lede: "每篇论文都是一道皇帝的诏书。说出它的名字，刺客会找到它流血的地方。",
+    paper_label: "论文", paper_ph: "链接、DOI、arXiv 编号，或完整标题",
+    pick_pdf: "选择 PDF…", pick_data: "附上数据…", pick_file: "选择文件…",
+    more: "更多指令", claim_label: "要检验的结论（可选）", claim_ph: "默认：论文的核心结论",
+    agent: "刺客", depth: "深度", thorough: "彻查", swift: "速战", auto: "自动",
+    unleash: "放出刺客", demo: "观看演示",
+    no_paper: "请先填写论文，或选择一个文件。",
+    no_agent: "没有找到 Claude Code 或 Codex。装好其中一个并登录后，再打开 Econoclast。",
+    recent: "近期行刺",
+    plea_title: "刺客向你求援", plea_drop: "把文件拖到这里",
+    plea_url: "……或者给一个链接", plea_send: "交给他", plea_decline: "我也拿不到",
+    drop_hint: "把论文拖进窗口任意位置", running: "行刺中", done: "已裁决", failed: "失败",
+    aborted: "已召回", interrupted: "已中断", starting: "出发中", new: "新建",
+    read_tabula: "阅读判词", replay: "重放这次行刺", open_html: "打开 HTML 报告",
+    reveal: "打开案卷文件夹", back: "回到中庭", new_hunt: "新的行刺",
+    headline: "裁决", assessment: "评述", the_decree: "诏书", w_title: "伤口",
+    p_title: "被挡下的刀", viae_title: "千条道路", spec_title: "铜镜（复现）",
+    change: "什么能改变裁决", survived: "站得住的部分", final_msg: "刺客的报告",
+    quote_unverified: "引文未在论文中找到", remedy: "补救", artifacts: "证物",
+    conf: "置信度", none_yet: "没有伤口。", archive_title: "卷宗", empty_archive: "还没有行刺记录。",
+    paper_val: "论文", ours: "复现", match: "吻合", close: "接近", mismatch: "不符",
+    roads: "条道路", sig_share: "在论文方向上显著",
+    hunt_failed: "行刺在裁决之前中止了。", hunt_aborted: "刺客已被召回。",
+    plea_card: "向旅人求援", plea_answered: "旅人已回应", plea_declined: "旅人也拿不到",
+    confirm_abort: "召回刺客？目前的进展会留在卷宗里。",
+    agent_missing: "未找到刺客", agent_ok: "刺客就绪",
+    cost: "花费", turns: "轮次", tokens: "token", demo_banner: "演示 · 一次录制的行刺",
+    pro1k: "拉文纳", pro1: "一个秋日的午后。你来看圣维塔莱教堂的金色马赛克。",
+    pro2k: "圣维塔莱", pro2: "一千五百年的玻璃与石头，每一块镶片都由人手嵌上。",
+    pro3k: "然后", pro3: "金色开始流动。",
+    pro4k: "刺客", pro4: "散落的镶片聚拢起来，走出一个刺客。",
+    pro5: "给我一道诏书，我会找到它流血的地方。",
+    pro6k: "ECONOCLAST", pro6: "每篇论文都是一道诏书，每道诏书都有破绽。",
+    sicarius: "刺客", traveller: "旅人", conspirator: "同谋",
+    tesserae_counted: "块镶片已清点", flags: "处可疑", rows: "行", cols: "列",
+    forge_ready: "工坊就绪", forge_run: "运行", data_in: "数据入仓", data_fail: "下载被拒",
+    paper_in: "诏书已入港", paper_fail: "被挡在城门外",
+    vault: "已封存入库", still_running: "仍在运行",
+    act_read: "阅读", act_write: "写入", act_run: "运行", act_fetch: "下载", act_search: "搜索",
+    act_browse: "浏览网页", act_spawn: "派出同谋", act_plan: "规划", act_tool: "使用", act_verdict: "宣读裁决",
+    tool_proclaim: "前往下一站", tool_fetch_paper: "下载论文", tool_read_paper: "通读论文",
+    tool_mark_target: "锁定诏书", tool_verify_quote: "核对引文", tool_abacus: "重算数字",
+    tool_forensics_paper: "筛查数字里的伪造痕迹", tool_compare_versions: "比对论文的不同版本", tool_field_notes: "撰写现实简报",
+    tool_novacula: "用奥卡姆剃刀削模型", tool_search_literature: "检索文献", tool_check_references: "核查参考文献",
+    tool_find_data_links: "寻找数据", tool_fetch_dataset: "下载数据", tool_public_series: "拉取公开数据", tool_inspect_dataset: "检查数据",
+    tool_fabrica_build: "搭建量化工坊", tool_fabrica_run: "在工坊里运行代码", tool_reproduce: "记录复现结果",
+    tool_audit_code: "审计作者代码", tool_forensics_data: "筛查数据里的伪造痕迹", tool_mille_viae: "跑上千种设定",
+    tool_inflict_wound: "记下一道伤口", tool_parry: "记下一次格挡", tool_plea: "向你求援", tool_pronounce_verdict: "宣读裁决",
+    cl_working: "工作中", cl_thinking: "思考中", cl_long: "长步骤", cl_quiet: "已安静", cl_done: "已完成", cl_stopped: "已停止", seal: "封印", field_brief: "现实简报", data_screen: "数据筛查", paper_screen: "论文筛查",
+    code_audit: "代码审计", rewritten: "处改写", removed: "处删除", added: "处新增", changed: "处改动",
+    data_steps: "处数据操作", files: "个文件", integrity: "诚信", real_world: "真实世界",
+    claimed: "论文声称的机制", real: "真实的人如何行事", institutions: "制度与时序",
+    magnitudes: "数量级", theory: "理论", rivals: "竞争性解释", sources: "资料来源",
+    integrity_note: "每一处标记都是供人核查的观察，绝不是指控。",
+  },
+};
+
+let lang = "en";
+let world = null;
+
+export function setWorld(w) { world = w; }
+export function getLang() { return lang; }
+export function setLang(l) {
+  lang = l === "zh" ? "zh" : "en";
+  document.documentElement.lang = lang;
+  document.querySelectorAll("[data-i18n]").forEach((el) => { el.textContent = t(el.dataset.i18n); });
+  document.querySelectorAll("[data-i18n-ph]").forEach((el) => { el.placeholder = t(el.dataset.i18nPh); });
+}
+export function t(key) { return (S[lang] && S[lang][key]) || S.en[key] || key; }
+
+export function stationName(key) {
+  const s = world && world.stations.find((x) => x.key === key);
+  return s ? { latin: s.latin, tr: lang === "zh" ? s.zh : s.en, act: lang === "zh" ? s.act_zh : s.act_en } : { latin: key, tr: "", act: "" };
+}
+export function bladeName(key) {
+  const b = world && world.blades.find((x) => x.key === key);
+  return b ? { latin: b.latin, tr: lang === "zh" ? b.zh : b.en, hunts: lang === "zh" ? b.hunts_zh : b.hunts_en } : { latin: key, tr: "", hunts: "" };
+}
+export function bandFor(score) {
+  const bands = (world && world.bands) || [];
+  for (const b of bands) if (score < b.ceiling) return b;
+  return bands[bands.length - 1];
+}
+export function bandText(b) { return b ? (lang === "zh" ? b.zh : b.en) : ""; }
+export function blurb(b) { return b ? (lang === "zh" ? b.blurb_zh : b.blurb_en) : ""; }
+export function sevWeight(sev) { return (world && world.severity_weight[sev]) || 0; }
+export function getWorld() { return world; }

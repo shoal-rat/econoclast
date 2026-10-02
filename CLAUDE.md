@@ -1,53 +1,38 @@
 # Econoclast
 
-Econoclast is an adversarial AI referee for empirical economics. It reads a paper, hunts for the
-choices that produced the result, researches any method it does not cover, re-runs the data when the
-data is public, and reports how fragile the headline is.
+Econoclast is a desktop app in which an autonomous agent (Claude Code or Codex) tests an empirical paper's
+headline claim while the user watches the hunt on a living Ravenna mosaic. The agent fetches the paper and its
+data, learns the real-world setting, builds a local quant workshop, reproduces and attacks the result, screens
+for fabrication and spin, re-runs it across every defensible specification, and writes a verdict.
 
-It is a native-LLM tool: it runs on Claude Code or Codex (no API key, no offline mode, no model
-routing). If neither CLI is on PATH it stops and says so rather than degrading.
+## Layout
 
-When you are working in this repo, or when someone asks you to check a paper, follow these rules.
+- `src/econoclast/world.py`: the lexicon (stations, blades, verdict bands, seals). Change names here only.
+- `case/`: case folder, append-only event log, wounds, the score and seal, the Tabula.
+- `arsenal/`: the MCP server the agent uses (`server.py` wraps the plain functions in `tools.py`) and the
+  doctrine (`doctrine.py`: standing orders plus per-station orders handed out by `proclaim`).
+- `sicarius/`: builds the agent command and parses Claude / Codex JSON streams into events.
+- `tesserae/` reading and paper forensics; `bibliotheca/` literature, data, code audit; `viae/` estimators and
+  data forensics; `fabrica/` the shared quant venv; `app/` the window, the bridge `Api`, and `web/` (stage,
+  director, UI; buildless ES modules).
+- `tools/art/` regenerates the mosaic art with Codex (`gen_art.py`) and packs it (`build_art.py`);
+  `tools/dev/rehearsal.py` plays a scripted hunt without an agent for stage work.
 
-## When a user asks you to check or verify a paper
+## Rules for changes
 
-The user may not be technical. Finish the whole job from one request and ask as little as possible.
-
-1. Work out what they gave you (a link, a file, a title, maybe a dataset). Use the `econoclast_intake`
-   MCP tool to get the short list of plain-language questions for anything missing. Ask only what you
-   must, in plain words. The dataset and the specific claim are optional; do not block on them.
-2. Run `econoclast verify "<paper>"` (or the `econoclast_verify` MCP tool). One call does the
-   critique, the research-then-verify pass for uncovered methods, and the data re-run. Add `--deep`
-   for a harder pass on a difficult method.
-3. Explain the result in plain language. Lead with the fragility score in one sentence. For each
-   serious finding, say what it means and why it matters, and quote the paper. Offer the full report.
-
-## Core rules
-
-- Ground every model finding in a verbatim quote from the paper.
-- Do not guess about a method you are unsure of. For anything you do not know cold, Econoclast
-  retrieves the method's literature for you. Rely on that and say when something could not be verified.
-- Review identity-blind. Judge the work, not the authors.
-- A flagged result is a hypothesis to check, not an accusation. An impossible reported number is
-  often an honest typo.
-
-## Project layout
-
-- `src/econoclast/` is the package: `ingest` (PDF/LaTeX/URL, claim extraction), `attacks` (the unified
-  Attack/Finding model, the grounded LLM critiques, citation check, the methodology audit),
-  `replication` (specification curve, McCrary, Callaway-Sant'Anna), `agent` (orchestration,
-  comprehension, intake, branch-and-merge, referee), `report`, and `llm` (the backend that drives
-  Claude Code or Codex).
-- `integrations/` holds the Claude Code and Codex skill, command, prompt, and MCP wiring.
-- `docs/` covers the methods, the philosophy of researching what we don't hardcode, and how to read a
-  report. `tests/` runs with `pytest`, injecting a fake backend so no CLI is spawned.
+- Wounds stay grounded: text wounds quote the paper (checked by `verify_quote`), computation wounds cite
+  artifacts that exist. Integrity wounds describe observations, never accusations.
+- New statistical screens and estimators need known-answer tests on synthetic data with a known truth, and a
+  false-positive check on realistic honest data.
+- The doctrine is written as positive, opinionated rules for the agent, not lists of prohibitions.
+- Every event the arsenal emits should mean something on the wall; when you add one, give it choreography in
+  `web/js/director.js` and a line in `web/js/ui.js`'s chronicle.
+- Tests never spawn a real agent (`tests/test_hunt.py` uses a fake `claude`).
 
 ## Development
 
 ```bash
-pip install -e ".[dev,pdf,replication]"
-pytest && ruff check src tests
+uv venv && uv pip install -e ".[dev,pdf]"
+pytest && ruff check src tests tools
+econoclast app --browser          # UI in a browser (developer preview)
 ```
-
-Any new statistical estimator (in `replication`) needs a known-answer test validated against synthetic
-data with a known truth. Any new model finding must stay grounded in a quote.

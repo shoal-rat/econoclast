@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Econoclast</title>
+<link rel="stylesheet" href="css/fonts.css">
+<link rel="stylesheet" href="css/ravenna.css">
+</head>
+<body>
+<div id="app" data-view="boot">
+  <header id="bar">
+    <div class="brand" data-go="atrium">
+      <img class="emblem" src="assets/icon.png" alt="">
+      <div class="wordmark"><b>ECONOCLAST</b><span data-i18n="brand_sub">Ravenna</span></div>
+    </div>
+    <nav id="frieze" aria-label="progress"></nav>
+    <div class="tools">
+      <button class="chip" id="btn-archive" data-i18n="archive">Archive</button>
+      <button class="chip" id="btn-prologue" data-i18n="prologue">Prologue</button>
+      <button class="chip" id="btn-lang">中</button>
+      <button class="chip icon" id="btn-sound" title="sound">♪</button>
+      <span class="gem" id="agent-gem" title=""></span>
+    </div>
+  </header>
+
+  <main id="main">
+    <section id="theatre">
+      <div id="stage-wrap">
+        <div id="stage-box">
+          <div id="stage-inner">
+            <canvas id="stage" width="1600" height="900"></canvas>
+            <div id="overlay"></div>
+          </div>
+          <div id="caption"></div>
+          <div id="clepsydra" class="clepsydra" title="Clepsydra"></div>
+          <button id="skip" class="ghost" data-i18n="skip">Skip ›</button>
+        </div>
+      </div>
+
+      <div id="hud">
+        <div class="decree"><span class="lbl" data-i18n="decree">The decree</span><span id="decree-text">—</span></div>
+        <div class="tally"><span class="lbl" data-i18n="wounds">Wounds</span><span id="wound-tiles"></span></div>
+        <div class="seal-box"><span class="lbl" data-i18n="seal">Seal</span><div id="seal" class="seal-ind integrum"><i></i><span></span></div></div>
+        <div class="halo"><span class="lbl" data-i18n="fragility">Fragility</span>
+          <div class="meter"><i id="halo-fill"></i></div><b id="halo-num">0</b></div>
+        <button class="ghost danger" id="btn-abort" data-i18n="abort">Call off</button>
+      </div>
+
+      <aside id="chronicle">
+        <div class="chron-head"><span data-i18n="chronicle">Chronicle</span><small id="chron-meta"></small></div>
+        <ol id="chron-list"></ol>
+      </aside>
+    </section>
+
+    <section id="atrium">
+      <form id="offer" class="ansata" autocomplete="off">
+        <h1 data-i18n="offer_title">Bring a decree to the Sicarius</h1>
+        <p class="lede" data-i18n="offer_lede">A paper is an emperor's decree. Name it and the assassin will find where it bleeds.</p>
+        <label class="field big">
+          <span data-i18n="paper_label">The paper</span>
+          <input id="in-paper" type="text" data-i18n-ph="paper_ph" placeholder="Link, DOI, arXiv id, or title">
+        </label>
+        <div class="filerow">
+          <button type="button" class="ghost" id="pick-paper" data-i18n="pick_pdf">Choose a PDF…</button>
+          <span class="picked" id="paper-picked"></span>
+        </div>
+        <details id="more">
+          <summary data-i18n="more">More orders</summary>
+          <label class="field"><span data-i18n="claim_label">Claim to test (optional)</span>
+            <input id="in-claim" type="text" data-i18n-ph="claim_ph" placeholder="Default: the headline result"></label>
+          <div class="filerow">
+            <button type="button" class="ghost" id="pick-data" data-i18n="pick_data">Add a dataset…</button>
+            <span class="picked" id="data-picked"></span>
+          </div>
+          <div class="seg" id="seg-agent"></div>
+          <div class="seg" id="seg-depth"></div>
+        </details>
+        <button type="submit" class="tessera" id="go" data-i18n="unleash">Unleash the Sicarius</button>
+        <button type="button" class="ghost" id="demo" data-i18n="demo">Watch a demonstration</button>
+        <p class="note" id="offer-note"></p>
+      </form>
+      <div id="recent"></div>
+    </section>
+
+    <section id="tabula"></section>
+    <section id="archive"></section>
+  </main>
+
+  <div id="plea" class="modal" hidden>
+    <div class="ansata">
+      <h2 data-i18n="plea_title">The Sicarius asks for your help</h2>
+      <p class="what" id="plea-what"></p>
+      <p class="why" id="plea-why"></p>
+      <p class="where" id="plea-where"></p>
+      <div class="drop" id="plea-drop" data-i18n="plea_drop">Drop the file here</div>
+      <div class="filerow">
+        <button type="button" class="ghost" id="plea-pick" data-i18n="pick_file">Choose a file…</button>
+        <span class="picked" id="plea-picked"></span>
+      </div>
+      <label class="field"><span data-i18n="plea_url">…or a link</span><input id="plea-url" type="text"></label>
+      <div class="row">
+        <button class="tessera" id="plea-send" data-i18n="plea_send">Hand it over</button>
+        <button class="ghost" id="plea-decline" data-i18n="plea_decline">I can't get it</button>
+      </div>
+    </div>
+  </div>
+  <input type="file" id="file-fallback" hidden>
+  <div id="toast"></div>
+</div>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

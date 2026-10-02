@@ -3,7 +3,63 @@
 All notable changes to Econoclast are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/); versioning is [SemVer](https://semver.org/).
 
-## [Unreleased]
+## [2.0.0] - 2026-10-02 · Ravenna
+
+A ground-up rebuild. Econoclast is now a desktop app in which a fully autonomous agent tests a paper while
+you watch the hunt unfold on a living Ravenna mosaic.
+
+### Added
+- **The app.** A native window (pywebview) with a WebGL-free canvas stage composited from generated
+  Ravenna-style mosaic art: a prologue in San Vitale, the palace atrium, eight station walls, and the
+  Tabula report. `econoclast install-app` installs `Econoclast.app` on macOS. Chinese and English UI.
+- **The agent as the worker.** Hunts run Claude Code (`stream-json`) or Codex (`exec --json`) with full
+  autonomy by default (no permission prompts, no sandbox, network on), the Playwright MCP for blocked
+  downloads, the user's own MCP servers, and (Claude) `conspirator` subagents. Hunts run detached from the
+  window and survive closing it. `permissions: guarded` gives a shorter leash.
+- **The arsenal**, an MCP server of 27 tools bound to each case: paper fetching and reading, quote
+  verification, literature search, dataset discovery and download, FRED and World Bank series, the shared
+  quant workshop (`fabrica_build`, `fabrica_run`), reproduction records, the specification curve, wounds,
+  parries, pleas to the traveller, and the verdict.
+- **The Forum** station and three reality blades: **Inversio** (reverse causality), **Theoria** (theory used
+  where its assumptions fail), **Mundus** (mechanisms real people would not follow, impossible magnitudes),
+  fed by a sourced field brief (`field_notes`).
+- **Novacula**, Occam's razor: theory, mechanisms and assumptions that explain nothing a simpler account does
+  not, with a `novacula` tool that compares the plain and the paper's model (AIC/BIC, LR test, cross-validated
+  RMSE) on the data.
+- **The clepsydra**: a water clock on the wall showing real progress, the current step in plain words, and
+  liveness (tool calls, heartbeats from long scripts, and the model's thinking all count as signs of life).
+- **Depth-weighted fragility**: the deepest wound counts fully, each further one 30% less, so the score
+  follows how deep the worst wounds go rather than how many blades were swung.
+- **The vault**: when a hunt closes, data, packages, downloads, PDFs, big outputs and the raw agent log are
+  packed into `vault.tar.xz` (`econoclast pack|unpack|clean`); the shared workshop is lean by default.
+- **Integrity**: **Falsum** (GRIM, caliper tests, p-curve, repeated estimates, terminal digits; duplicate and
+  near-duplicate rows, digit and Benford tests, heaping, impossible values, Carlisle's balance test),
+  **Palimpsestus** (version and pre-registration diffs), **Fucus** (spin; abstract numbers no table
+  supports), a code audit for undisclosed data steps, and the **seal** (intact / questioned / broken),
+  judged apart from fragility.
+- The **Fabrica**: a shared local quant environment built with uv (pandas, statsmodels, linearmodels,
+  rdrobust, rddensity; heavier packages on demand), where the agent reproduces the headline number.
+- A case folder per hunt with an append-only event log, the agent's exact orders (`MANDATE.md`), its raw
+  stream, every artifact, and the Tabula as HTML, Markdown and JSON.
+
+### Changed
+- The vocabulary: findings are **wounds**, lines of attack are **blades**, the fragility score is read as
+  the Emperor's fate (Imperator stat · Laesus · Vulneratus · Moribundus · Cecidit).
+- Packages reorganised: `tesserae` (reading), `bibliotheca` (literature, data, code audit), `viae`
+  (estimators and data forensics), `case`, `arsenal`, `sicarius`, `fabrica`, `app`.
+
+### Removed
+- The fixed LLM-call pipeline (`agent/`, `attacks/`, `llm/`), the Streamlit UI, the old MCP tools, the
+  setup wizard and the Claude Code / Codex prompt integrations; the agent now does that work itself.
+
+### Kept
+- The estimators and their known-answer tests: the specification curve, McCrary, Callaway-Sant'Anna,
+  Sun-Abraham and the Goodman-Bacon contrast.
+
+The 1.x code is preserved under the `v1-final` tag.
+
+## [1.x] (pre-Ravenna)
+
 
 ### Added (self-equipping + schema-validated reads)
 - `econoclast setup` now installs a browser for the agent: it adds the Playwright MCP to Claude Code
