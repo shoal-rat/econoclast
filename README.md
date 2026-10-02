@@ -56,12 +56,15 @@ wounds add up.
 ## Watch it work
 
 <p align="center">
-  <a href="docs/media/sicarius-vs-colonial-origins.mp4"><img src="docs/media/film_teaser.gif" alt="The Sicarius vs. The Colonial Origins: title card and the verdict, Vulneratus" width="640"></a><br>
-  <b><a href="docs/media/sicarius-vs-colonial-origins.mp4">▶ The Sicarius vs. The Colonial Origins</a></b> (88 s, a mosaic parody).<br>
-  <sub>A real hunt on Acemoglu, Johnson &amp; Robinson (2001). The headline 0.94 reproduces to the decimal. Then the
-  agent finds that settler mortality predicts schooling better than institutions (hold schooling fixed and F = 0.5), that
-  Occam's razor prefers a failed exclusion to the paper's "measurement error" story, and that a weak-IV-robust positive
-  effect survives on 42% of 768 roads. Every caption comes from the agent's sourced findings.</sub>
+  <a href="docs/media/ravenna-roast-en.mp4"><img src="docs/media/en/roast_teaser.gif" alt="The Ravenna Roast: the title card, the first-stage punchline and the verdict, Vulneratus" width="640"></a><br>
+  <b><a href="docs/media/ravenna-roast-en.mp4">▶ The Ravenna Roast</a></b> (2 min 21 s, sound on) · <a href="docs/media/ravenna-roast-zh.mp4">中文版</a><br>
+  <sub>A stand-up roast of Acemoglu, Johnson &amp; Robinson (2001), cut from a real hunt, with a synthesized MC, an
+  original tiptoe score, rimshots, a drumroll for the verdict and a sad trombone. The headline 0.94 reproduces to the
+  decimal with no fabrication signals. Then the jokes write themselves from the agent's findings: 36 of the 64 mortality
+  rates are borrowed from other countries (Albouy), hold schooling fixed and the first-stage F is 0.5, Occam's razor
+  prefers a failed exclusion to the paper's "measurement error" story, one point on an investor risk rating is worth a
+  2.6-fold income gap, and a weak-IV-robust positive effect survives on 42% of 768 roads. Every punchline rests on a
+  sourced wound; every wound is a hypothesis to check, not an accusation.</sub>
 </p>
 
 | The gold wakes up | The Forum objects | The palace gate |

@@ -33,11 +33,13 @@
 ## 看它干活
 
 <p align="center">
-  <a href="docs/media/sicarius-vs-colonial-origins.mp4"><img src="docs/media/film_teaser.gif" alt="刺客对决《殖民起源》：片头与裁决“负伤”" width="640"></a><br>
-  <b><a href="docs/media/sicarius-vs-colonial-origins.mp4">▶ 刺客对决《殖民起源》</a></b>（88 秒，镶嵌画恶搞短片）<br>
-  <sub>对 Acemoglu、Johnson 与 Robinson（2001）的一次真实行刺。核心系数 0.94 一位不差地复现；随后刺客发现，殖民者死亡率预测教育比预测制度还准
-  （控制住教育后 F = 0.5），奥卡姆剃刀认为“排他性不成立”比论文的“测量误差”故事更简单，而在 768 条道路中只有 42% 给出稳健的正效应。
-  片中每一句字幕都出自刺客附有来源的检验结果。</sub>
+  <a href="docs/media/ravenna-roast-zh.mp4"><img src="docs/media/zh/roast_teaser.gif" alt="拉文纳吐槽大会：片头、第一阶段那个梗，以及裁决“负伤”" width="640"></a><br>
+  <b><a href="docs/media/ravenna-roast-zh.mp4">▶ 拉文纳吐槽大会</a></b>（2 分 25 秒，请开声音）· <a href="docs/media/ravenna-roast-en.mp4">English</a><br>
+  <sub>一场对 Acemoglu、Johnson 与 Robinson（2001）的脱口秀式吐槽，素材全部剪自一次真实行刺：合成的主持人配音、原创的蹑手蹑脚配乐、
+  每个梗后面的“咚咚锵”、裁决前的鼓点和最后的悲伤长号。核心系数 0.94 一位不差地复现，造假信号为零；然后梗自己就来了：
+  64 个死亡率里有 36 个是从别国借来的（Albouy），控制住教育后第一阶段 F 值只剩 0.5，奥卡姆剃刀认为“排他性不成立”比论文的
+  “测量误差”故事更简单，投资风险评分差一分就值 2.6 倍收入差距，而 768 条道路中只有 42% 给出稳健的正效应。
+  每个梗都落在一道有来源的伤口上；每道伤口都是待核查的假设，不是指控。</sub>
 </p>
 
 | 金色苏醒 | 广场上的人有话要说 | 宫门之战 |

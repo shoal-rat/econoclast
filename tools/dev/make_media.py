@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Rebuild the README media (stills, GIFs, the film) from recorded hunts.
+"""Rebuild the README stills and GIFs from recorded hunts (the film is tools/dev/roast_film.py).
 
-  .venv/bin/python tools/dev/make_media.py --en <case> --zh <case> [--film <case> --captions film.json]
+  .venv/bin/python tools/dev/make_media.py --en <case> --zh <case>
 
 Needs the UI preview running (`econoclast app --browser --no-open`), Node with playwright-core on
 NODE_PATH (see tools/dev/capture.mjs) and ffmpeg. Capture moments are found from each hunt's events.
@@ -58,8 +58,6 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--en", required=True)
     ap.add_argument("--zh", required=True)
-    ap.add_argument("--film")
-    ap.add_argument("--captions")
     a = ap.parse_args()
     tmp = Path(tempfile.mkdtemp(prefix="econoclast-media-"))
     for lang, cid in (("en", a.en), ("zh", a.zh)):
@@ -77,34 +75,6 @@ def main() -> None:
         gif(tmp / f"prologue_{lang}.webm", 12.5, 12, out / "prologue.gif")
         gif(tmp / f"forum_{lang}.webm", 0.5, 9, out / "forum.gif")
         gif(tmp / f"palace_{lang}.webm", 0.5, 10, out / "palace.gif")
-    if a.film:
-        film = tmp / "film.webm"
-        capture(f"case={a.film}&replay=1&from=0&speed=3&lang=en", film, 240, Path(a.captions) if a.captions else None)
-        pro = tmp / "prologue_en.webm"
-        dur = float(subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0",
-                                    str(film)], capture_output=True, text=True).stdout)
-        video = tmp / "film.mp4"
-        run("ffmpeg", "-v", "error", "-y", "-i", str(film), "-i", str(pro), "-filter_complex",
-            "[0:v]trim=0:5.4,setpts=PTS-STARTPTS,fps=30,scale=1280:800[a];"
-            "[1:v]trim=12.5:25,setpts=PTS-STARTPTS,fps=30,scale=1280:800[b];"
-            f"[0:v]trim=5.4:{dur},setpts=PTS-STARTPTS,fps=30,scale=1280:800[c];"
-            "[a][b][c]concat=n=3:v=1:a=0,format=yuv420p[v]", "-map", "[v]", "-c:v", "libx264", "-preset", "slow",
-            "-crf", "30", "-movflags", "+faststart", str(video))
-        total = dur - 5.4 + 5.4 + 12.5
-        drone = tmp / "drone.wav"
-        run("ffmpeg", "-v", "error", "-y", "-f", "lavfi", "-i",
-            "aevalsrc='0.10*sin(2*PI*110*t)*(0.7+0.3*sin(2*PI*0.07*t))+0.07*sin(2*PI*164.81*t)*(0.6+0.4*sin(2*PI*0.05*t+1))"
-            f"+0.05*sin(2*PI*220*t)+0.03*sin(2*PI*329.63*t)*(0.5+0.5*sin(2*PI*0.11*t))+0.02*sin(2*PI*55*t)':s=44100:d={total}",
-            "-af", f"afade=t=in:d=3,afade=t=out:st={total - 4}:d=4,lowpass=f=2000", str(drone))
-        final = MEDIA / "sicarius-vs-colonial-origins.mp4"
-        run("ffmpeg", "-v", "error", "-y", "-i", str(video), "-i", str(drone), "-c:v", "copy", "-c:a", "aac", "-b:a",
-            "96k", "-shortest", "-movflags", "+faststart", str(final))
-        verdict_at = total - 14
-        run("ffmpeg", "-v", "error", "-y", "-i", str(final), "-filter_complex",
-            f"[0:v]trim=0.5:4.5,setpts=PTS-STARTPTS[a];[0:v]trim={verdict_at}:{verdict_at + 8},setpts=PTS-STARTPTS[b];"
-            "[a][b]concat=n=2:v=1:a=0,fps=10,scale=640:-1:flags=lanczos,split[x][y];"
-            "[x]palettegen=max_colors=160:stats_mode=diff[p];[y][p]paletteuse=dither=bayer:bayer_scale=4:diff_mode=rectangle",
-            str(MEDIA / "film_teaser.gif"))
     print(json.dumps({"media": str(MEDIA), "scratch": str(tmp)}))
 
 

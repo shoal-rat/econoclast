@@ -69,7 +69,7 @@ async function boot() {
   // developer deep links (screenshots, debugging): ?view=atrium | ?case=<id>[&view=tabula][&at=<seq>]
   const q = new URLSearchParams(location.search);
   if (q.get("case")) return openMoment(q.get("case"), q.get("view"), q.get("at"),
-    { replay: q.get("replay"), from: q.get("from"), speed: Number(q.get("speed") || 1) });
+    { replay: q.get("replay"), from: q.get("from"), until: q.get("until"), speed: Number(q.get("speed") || 1) });
   if (q.get("view") === "atrium") return atrium();
   if (q.get("view") === "prologue") return runPrologue();
   const seen = hello.prefs && hello.prefs.seen_prologue;
@@ -77,12 +77,13 @@ async function boot() {
   else atrium();
 }
 
-async function openMoment(id, view, at, { replay, from, speed = 1 } = {}) {
+async function openMoment(id, view, at, { replay, from, until, speed = 1 } = {}) {
   if (view === "tabula") return openTabula(id);
   const r = await api.events(id, 0);
   if (replay) {
     const start = Number(from || 0);
-    return playRecorded(r.events, { caseId: id, speed, skipTo: start });
+    const evs = until ? r.events.filter((e) => e.seq <= Number(until)) : r.events;
+    return playRecorded(evs, { caseId: id, speed, skipTo: start });
   }
   const evs = at ? r.events.filter((e) => e.seq <= Number(at)) : r.events;
   app.caseId = id; app.demo = true;
