@@ -176,6 +176,8 @@ class Api:
 
         case = Case.load(case_id)
         meta = case.meta()
+        if meta.get("status") in ("running", "starting"):
+            return {"ok": False, "error": "running"}
         if case.verdict() is not None:
             return {"ok": False, "error": "done"}
         if self._settings.pick_backend(meta.get("backend_used") or meta.get("backend")) is None:
