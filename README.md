@@ -88,6 +88,24 @@ You need **Claude Code** or **Codex** installed and logged in (Econoclast uses t
 there is no API key). `uv` makes the workshop build in seconds, and `node`/`npx` gives the agent a real
 browser through the Playwright MCP; both are optional.
 
+**macOS 14 or later (Apple silicon): the disk image.** The app carries its own Python and every library it needs, so
+nothing else has to be installed for the window, the hunts or the arsenal. Download
+`Econoclast-<version>-arm64.dmg` (about 110 MB) from the
+[latest release](https://github.com/shoal-rat/econoclast/releases/latest), open it, and drag **Econoclast**
+onto Applications. The app is ad-hoc signed, not notarized, so the first launch of a downloaded copy needs
+right-click > Open (or System Settings > Privacy & Security > Open Anyway). To build the image yourself
+(it then opens directly) and install it in one go:
+
+```bash
+git clone https://github.com/shoal-rat/econoclast && cd econoclast
+python3 tools/macos/build.py --install
+```
+
+The image lands in `dist/`. For the command line, link the copy inside the app:
+`ln -s /Applications/Econoclast.app/Contents/Resources/bin/econoclast /usr/local/bin/econoclast`.
+
+**From source (any platform):**
+
 ```bash
 pip install "econoclast @ git+https://github.com/shoal-rat/econoclast"
 ```
@@ -96,8 +114,9 @@ pip install "econoclast @ git+https://github.com/shoal-rat/econoclast"
 econoclast install-app
 ```
 
-The second command puts **Econoclast.app** in `~/Applications`, so it lives in your Dock, Launchpad and
-Spotlight. On Linux and Windows, run `econoclast` to open the same window.
+On macOS the second command puts a thin **Econoclast.app** in `~/Applications` that runs the Python you
+installed into, so upgrading the package upgrades the app. On Linux and Windows, run `econoclast` to open
+the same window.
 
 ```bash
 econoclast doctor
@@ -290,6 +309,11 @@ econoclast app --browser      # the UI in a browser, for front-end work
 
 The tests never spawn a real agent: the runner is exercised with a fake `claude` that streams JSON.
 Estimators in `viae/` carry known-answer tests against synthetic data with a known truth.
+
+`tools/macos/build.py` builds the self-contained app: a relocatable CPython (python-build-standalone, via
+uv) with Econoclast installed into it, a small C launcher (`launcher.c`) that embeds that interpreter so
+macOS sees the window as Econoclast.app, precompiled bytecode, an ad-hoc signature, and a dmgbuild disk
+image with the mosaic background from `dmg_background.py`.
 
 The art is generated with Codex image generation from prompts in `tools/art/gen_art.py`, using a
 photograph of the San Vitale apse as the style reference, then keyed, sliced and packed by

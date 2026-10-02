@@ -64,7 +64,11 @@ def serve(port: int = 7777, *, open_browser: bool = True) -> None:
             self.end_headers()
             self.wfile.write(body)
 
-    server = ThreadingHTTPServer(("127.0.0.1", port), Handler)
+    class Server(ThreadingHTTPServer):
+        request_queue_size = 128  # the stage asks for dozens of sprites at once; the default 5 drops some
+        daemon_threads = True
+
+    server = Server(("127.0.0.1", port), Handler)
     url = f"http://127.0.0.1:{port}/?bridge=http"
     print(f"Econoclast UI preview: {url}")
     if open_browser:

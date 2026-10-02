@@ -3,6 +3,30 @@
 All notable changes to Econoclast are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/); versioning is [SemVer](https://semver.org/).
 
+## [2.0.1] - 2026-10-02 · The disk image
+
+### Added
+- **A self-contained macOS app and disk image.** `tools/macos/build.py` builds Econoclast.app with its own
+  relocatable CPython 3.12 and every dependency inside, a C launcher that embeds that interpreter (so the
+  Dock, the menu bar and LaunchServices see Econoclast.app, and a kept-in-Dock tile is the running app),
+  precompiled bytecode and an ad-hoc signature, then a dmgbuild image with a mosaic background.
+  `--install` installs it into /Applications. Needs macOS 14+ (the numpy/scipy Accelerate builds).
+- The app icon follows Apple's grid (rounded square, soft shadow) in Finder, the Dock and Launchpad.
+- Tests for the detached hunt (a real runner process whose agent starts the arsenal MCP server from
+  mcp.json), the Fabrica's build and run paths, PDF reading with pypdf, and the macOS installers.
+
+### Fixed
+- A finished hunt writes `case.closed` before its final status, so the window can no longer stop listening
+  while a large vault is still being packed and miss the end of the hunt.
+- `fabrica_run` timeouts stop the script's whole process group and keep the output printed so far.
+- `fabrica_build` rebuilds a workshop whose base interpreter disappeared, and retries packages one by one
+  whenever a batch install fails (uv resolves all or nothing and never prints "error").
+- A missing workshop interpreter is reported to the agent instead of raising; the forge's hammer always stops.
+- The arsenal MCP server reports Econoclast's version; `python -m econoclast` shows `econoclast` in help.
+- `econoclast install-app` refuses to replace the self-contained app or to run from inside it.
+- The dev preview server no longer drops sprite requests under load (listen backlog 128).
+- Demo recordings store `~` instead of the recording machine's home folder.
+
 ## [2.0.0] - 2026-10-02 · Ravenna
 
 A ground-up rebuild. Econoclast is now a desktop app in which a fully autonomous agent tests a paper while

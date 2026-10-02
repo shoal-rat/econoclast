@@ -87,10 +87,15 @@ def _macos_dock_icon() -> None:
         return
     try:
         from AppKit import NSApplication, NSImage
+        from Foundation import NSData
         from PyObjCTools import AppHelper
 
+        from econoclast.app.macos import app_icon_png
+
+        png = app_icon_png(Path(ICON))  # the same rounded icon as the bundle's
+
         def apply() -> None:
-            img = NSImage.alloc().initWithContentsOfFile_(str(ICON))
+            img = NSImage.alloc().initWithData_(NSData.dataWithBytes_length_(png, len(png)))
             if img is not None:
                 NSApplication.sharedApplication().setApplicationIconImage_(img)
 
