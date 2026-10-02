@@ -355,7 +355,10 @@ def demo_export(case_id: str, out: str = typer.Option("", "--out")) -> None:
                "events": evs, "tabula": tabula_data(case)}
     dest = Path(out) if out else WEB / "demo" / f"card-krueger.{case.meta().get('lang', 'en')}.json"
     dest.parent.mkdir(parents=True, exist_ok=True)
-    dest.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+    text = json.dumps(payload, ensure_ascii=False)
+    # The demo ships to everyone: the recording machine's home folder becomes "~".
+    home_dir = json.dumps(str(Path.home()))[1:-1] + "/"
+    dest.write_text(text.replace(home_dir, "~/"), encoding="utf-8")
     console.print(f"Demo written to {dest} ({len(evs)} events)")
 
 

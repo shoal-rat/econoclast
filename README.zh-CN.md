@@ -62,6 +62,22 @@
 需要先装好并登录 **Claude Code** 或 **Codex**（用的是它们的订阅，不需要 API key）。有 `uv` 的话工坊几秒就能建好；
 有 `node`/`npx` 的话，刺客能通过 Playwright MCP 用上真正的浏览器。这两样都是可选的。
 
+**macOS 14 及以上（Apple 芯片）：磁盘映像。** 应用自带 Python 和全部依赖库，窗口、行刺和武器库都不需要另装任何东西。
+从[最新发布](https://github.com/shoal-rat/econoclast/releases/latest)下载 `Econoclast-<version>-arm64.dmg`（约 110 MB），
+打开后把 **Econoclast** 拖到「应用程序」即可。应用是临时签名（ad-hoc），没有经过苹果公证，所以下载来的那份
+第一次打开需要右键 > 打开（或在「系统设置 > 隐私与安全性」里点「仍要打开」）。也可以自己构建映像并一步装好
+（自己构建的可以直接打开）：
+
+```bash
+git clone https://github.com/shoal-rat/econoclast && cd econoclast
+python3 tools/macos/build.py --install
+```
+
+映像会放在 `dist/` 里。想在终端里用命令行，就链接应用里自带的那一份：
+`ln -s /Applications/Econoclast.app/Contents/Resources/bin/econoclast /usr/local/bin/econoclast`。
+
+**从源码安装（任何平台）：**
+
 ```bash
 pip install "econoclast @ git+https://github.com/shoal-rat/econoclast"
 ```
@@ -70,7 +86,8 @@ pip install "econoclast @ git+https://github.com/shoal-rat/econoclast"
 econoclast install-app
 ```
 
-第二条命令会把 **Econoclast.app** 装进 `~/Applications`，之后可以从程序坞、启动台和聚焦搜索打开。Linux 和 Windows 上直接运行 `econoclast` 打开同一个窗口。
+在 macOS 上，第二条命令会在 `~/Applications` 放一个轻量的 **Econoclast.app**，它运行你安装时用的那个 Python，
+所以升级包就等于升级应用。Linux 和 Windows 上直接运行 `econoclast` 打开同一个窗口。
 
 ```bash
 econoclast doctor

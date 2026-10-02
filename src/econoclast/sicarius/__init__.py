@@ -54,10 +54,11 @@ class Hunt:
 
     # -------------------------------------------------------------- wiring
     def _mcp_servers(self) -> dict[str, dict]:
+        arsenal = _self_cmd("arsenal", "--case", str(self.case.root))
         servers: dict[str, dict] = {
             "arsenal": {
-                "command": sys.executable,
-                "args": ["-m", "econoclast", "arsenal", "--case", str(self.case.root)],
+                "command": arsenal[0],
+                "args": arsenal[1:],
                 "env": {"ECONOCLAST_HOME": str(home()), "PYTHONUNBUFFERED": "1"},
             }
         }
@@ -158,8 +159,8 @@ class Hunt:
                 cwd=str(case.root), env=env, text=True, encoding="utf-8", errors="replace", bufsize=1,
                 start_new_session=True)
         except OSError as exc:
-            case.update_meta(status="failed", error=str(exc))
             case.emit("case.closed", status="failed", error=str(exc))
+            case.update_meta(status="failed", error=str(exc))
             raw.close()
             return "failed"
         case.update_meta(pid=self.proc.pid)
@@ -204,7 +205,7 @@ class Hunt:
                 from econoclast.case.tabula import write_tabula
 
                 write_tabula(case)
-        case.update_meta(status=status, ended=time.time(), returncode=rc, error=error or None, waiting_plea=None)
+        ended = time.time()
         if self.settings.pack_after:
             try:
                 from econoclast.case.vault import pack
@@ -213,6 +214,9 @@ class Hunt:
             except Exception as exc:  # noqa: BLE001 - packing must never lose the verdict
                 log.warning("could not pack %s: %s", case.id, exc)
         case.emit("case.closed", status=status, returncode=rc, error=error[-600:] if error else None)
+        # Last: the window stops polling once the status is final and no events are left, so the final
+        # status must never be visible before case.closed is (packing a big vault takes a while).
+        case.update_meta(status=status, ended=ended, returncode=rc, error=error or None, waiting_plea=None)
         log.info("hunt %s closed: %s (rc=%s)", case.id, status, rc)
         return status
 
@@ -267,8 +271,8 @@ def reap_orphans() -> list[str]:
         if meta.get("status") != "running":
             continue
         if not any(_alive(meta.get(k)) for k in ("runner_pid", "pid")):
-            case.update_meta(status="interrupted", waiting_plea=None)
             case.emit("case.closed", status="interrupted")
+            case.update_meta(status="interrupted", waiting_plea=None)
             fixed.append(case.id)
     return fixed
 
@@ -283,11 +287,19 @@ def _alive(pid) -> bool:  # noqa: ANN001
         return False
 
 
+def _self_cmd(*args: str) -> list[str]:
+    """Start more of Econoclast on the interpreter running now. Inside the macOS app bundle, pin isolation
+    in the arguments too (no user site-packages, no bytecode writes into the signed bundle, no cwd on the
+    path): an agent host may hand its MCP servers only an allowlisted environment."""
+    flags = ["-s", "-B", "-P"] if os.environ.get("ECONOCLAST_BUNDLE") else []
+    return [sys.executable, *flags, "-m", "econoclast", *args]
+
+
 def launch_detached(case: Case) -> int:
     """Run the hunt in its own process so it outlives the app window; returns the runner pid."""
     log_path = case.path("runner.log")
     with open(log_path, "a", encoding="utf-8") as fh:
-        proc = subprocess.Popen([sys.executable, "-m", "econoclast", "hunt", "--case", str(case.root)],
+        proc = subprocess.Popen(_self_cmd("hunt", "--case", str(case.root)),
                                 stdin=subprocess.DEVNULL, stdout=fh, stderr=fh, cwd=str(case.root),
                                 start_new_session=True, env={**os.environ, "ECONOCLAST_HOME": str(home())})
     case.update_meta(runner_pid=proc.pid, status="starting")
@@ -310,6 +322,6 @@ def stop(case: Case) -> bool:
         except OSError:
             pass
     if meta.get("status") in ("running", "starting"):
-        case.update_meta(status="aborted")
         case.emit("case.closed", status="aborted")
+        case.update_meta(status="aborted")
     return False

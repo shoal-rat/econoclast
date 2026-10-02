@@ -11,6 +11,7 @@ You can also attach it to your own Claude Code or Codex session to use the tools
 from __future__ import annotations
 
 import asyncio
+import functools
 import time
 from typing import Any
 
@@ -18,13 +19,14 @@ import anyio
 
 from econoclast.arsenal.tools import Arsenal
 from econoclast.case.store import Case
+from econoclast.version import __version__
 
 
 def _server_class():  # noqa: ANN202
     try:  # MCP Python SDK 2.x
         from mcp.server.mcpserver import MCPServer
 
-        return MCPServer
+        return functools.partial(MCPServer, version=__version__)
     except ImportError:  # SDK 1.x
         from mcp.server.fastmcp import FastMCP
 

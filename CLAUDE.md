@@ -17,6 +17,9 @@ for fabrication and spin, re-runs it across every defensible specification, and 
   director, UI; buildless ES modules).
 - `tools/art/` regenerates the mosaic art with Codex (`gen_art.py`) and packs it (`build_art.py`);
   `tools/dev/rehearsal.py` plays a scripted hunt without an agent for stage work.
+- `tools/macos/build.py` builds the self-contained Econoclast.app (bundled standalone CPython, embedding C
+  launcher, ad-hoc signature) and its DMG; `--install` installs it into /Applications. The bundle is signed:
+  nothing may write into it at runtime (the launcher sets PYTHONDONTWRITEBYTECODE; .pyc are prebuilt).
 
 ## Rules for changes
 

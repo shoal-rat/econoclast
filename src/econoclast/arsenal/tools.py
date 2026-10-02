@@ -407,10 +407,13 @@ class Arsenal:
         from econoclast import fabrica
 
         self.case.emit("forge", step="run", status="start", script=script)
-        res = fabrica.run_script(script, cwd=self.case.root, timeout=float(timeout_sec), args=args)
-        self.case.emit("forge", step="run", status="done", script=script, ok=res.get("ok", False),
-                       seconds=res.get("seconds"), new_files=res.get("new_files", [])[:10])
-        return res
+        res: dict[str, Any] = {"ok": False}
+        try:
+            res = fabrica.run_script(script, cwd=self.case.root, timeout=float(timeout_sec), args=args)
+            return res
+        finally:  # the hammer on the wall stops whatever happened
+            self.case.emit("forge", step="run", status="done", script=script, ok=res.get("ok", False),
+                           seconds=res.get("seconds"), new_files=res.get("new_files", [])[:10])
 
     def reproduce(self, what: str, paper_value: float, reproduced_value: float,
                   paper_se: float | None = None, reproduced_se: float | None = None,

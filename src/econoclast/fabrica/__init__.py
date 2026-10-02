@@ -12,6 +12,7 @@ from __future__ import annotations
 import json
 import os
 import shutil
+import signal
 import subprocess
 import sys
 import time
@@ -78,14 +79,18 @@ def build(extra: list[str] | None = None, *, timeout: float = 1200.0) -> dict:
     log_lines: list[str] = []
     uv = _uv()
 
+    if venv_dir().exists() and not _healthy(py):
+        # Its base interpreter is gone (moved app, removed Python): rebuild rather than patch it.
+        log_lines.append(f"workshop at {venv_dir()} no longer runs; rebuilding it")
+        shutil.rmtree(venv_dir(), ignore_errors=True)
     if not py.exists():
         if uv:
             cmd = [uv, "venv", "--python", PYTHON_VERSION, str(venv_dir())]
         else:
             cmd = [sys.executable, "-m", "venv", str(venv_dir())]
-        log_lines.append(_run(cmd, timeout))
+        log_lines.append(_run(cmd, timeout)[1])
         if not py.exists():  # uv could not fetch 3.12: fall back to whatever runs us
-            log_lines.append(_run([sys.executable, "-m", "venv", str(venv_dir())], timeout))
+            log_lines.append(_run([sys.executable, "-m", "venv", "--clear", str(venv_dir())], timeout)[1])
 
     have = set(_installed().keys())
     want = [p for p in (*BASE_PACKAGES, *extra) if _norm(p) not in have]
@@ -94,14 +99,14 @@ def build(extra: list[str] | None = None, *, timeout: float = 1200.0) -> dict:
             cmd = [uv, "pip", "install", "-p", str(py), *want]
         else:
             cmd = [str(py), "-m", "pip", "install", "-q", *want]
-        out = _run(cmd, timeout)
+        rc, out = _run(cmd, timeout)
         log_lines.append(out)
-        if "error" in out.lower() and len(want) > 1:
-            # One bad package must not sink the rest: retry one by one.
+        if rc != 0 and len(want) > 1:
+            # One bad package (uv resolves all or nothing) must not sink the rest: retry one by one.
             for pkg in want:
                 single = [uv, "pip", "install", "-p", str(py), pkg] if uv else \
                     [str(py), "-m", "pip", "install", "-q", pkg]
-                log_lines.append(_run(single, timeout / 4))
+                log_lines.append(_run(single, timeout / 4)[1])
 
     installed = _installed()
     manifest = {"python": str(py), "packages": sorted(installed), "built": time.time()}
@@ -146,11 +151,23 @@ def run_script(script: str | Path, *, cwd: str | Path, timeout: float = 900.0,
     started = time.time()
     env = {**os.environ, "MPLBACKEND": "Agg", "PYTHONUNBUFFERED": "1"}
     try:
-        proc = subprocess.run(cmd, cwd=str(cwd), capture_output=True, text=True, timeout=timeout,
-                              env=env, errors="replace")
-        rc, out, err = proc.returncode, proc.stdout, proc.stderr
-    except subprocess.TimeoutExpired as exc:
-        rc, out, err = -9, (exc.stdout or "") if isinstance(exc.stdout, str) else "", f"timed out after {timeout}s"
+        # Its own session, so a timeout takes down everything the script started, not just the script.
+        proc = subprocess.Popen(cmd, cwd=str(cwd), stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                stdin=subprocess.DEVNULL, env=env, start_new_session=True)
+    except OSError as exc:
+        return {"ok": False, "error": f"cannot start {cmd[0]}: {exc}. Run fabrica_build() to repair the workshop."}
+    try:
+        out_b, err_b = proc.communicate(timeout=timeout)
+        rc, note = proc.returncode, ""
+    except subprocess.TimeoutExpired:
+        try:
+            os.killpg(proc.pid, signal.SIGKILL)
+        except OSError:
+            proc.kill()
+        out_b, err_b = proc.communicate()
+        rc, note = -9, f"\n[timed out after {timeout:g}s; the script and its children were stopped]"
+    out = out_b.decode("utf-8", errors="replace")
+    err = err_b.decode("utf-8", errors="replace") + note
     after = _snapshot(Path(cwd))
     new_files = sorted(str(p.relative_to(cwd)) for p, m in after.items() if before.get(p) != m)
     return {
@@ -164,12 +181,19 @@ def run_script(script: str | Path, *, cwd: str | Path, timeout: float = 900.0,
 
 
 # ------------------------------------------------------------------ helpers
-def _run(cmd: list[str], timeout: float) -> str:
+def _run(cmd: list[str], timeout: float) -> tuple[int, str]:
     try:
         p = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout, errors="replace")
-        return (p.stdout or "") + (p.stderr or "")
+        return p.returncode, (p.stdout or "") + (p.stderr or "")
     except (OSError, subprocess.TimeoutExpired) as exc:
-        return f"{cmd[0]} failed: {exc}"
+        return -1, f"{cmd[0]} failed: {exc}"
+
+
+def _healthy(py: Path) -> bool:
+    try:
+        return subprocess.run([str(py), "-c", "import sys"], capture_output=True, timeout=60).returncode == 0
+    except (OSError, subprocess.TimeoutExpired):
+        return False
 
 
 def _installed() -> dict[str, str]:

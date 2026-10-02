@@ -6,10 +6,11 @@ import asyncio
 import json
 import sys
 import textwrap
+import time
 
 from econoclast.case import Case
 from econoclast.config import Settings
-from econoclast.sicarius import Hunt, reap_orphans
+from econoclast.sicarius import Hunt, launch_detached, reap_orphans
 from econoclast.sicarius.streams import ClaudeStream, CodexStream, tool_family
 
 
@@ -169,3 +170,47 @@ def test_mcp_server_exposes_the_arsenal():
               "fabrica_run", "reproduce", "mille_viae", "inflict_wound", "parry", "plea", "pronounce_verdict"):
         assert n in names, n
     assert json.dumps([getattr(t, "input_schema", None) or t.inputSchema for t in tools])
+
+
+def test_detached_hunt_runs_its_own_process_and_arsenal(tmp_path):
+    """The app's real path: a runner process (`-m econoclast hunt`) whose agent starts the arsenal MCP
+    server exactly as mcp.json says, on the same interpreter."""
+    fake = tmp_path / "fake-claude"
+    fake.write_text(textwrap.dedent(f"""\
+        #!{sys.executable}
+        import asyncio, json, os, sys
+        from mcp import ClientSession, StdioServerParameters
+        from mcp.client.stdio import stdio_client
+        sys.stdin.read()
+        spec = json.load(open(sys.argv[sys.argv.index("--mcp-config") + 1]))["mcpServers"]["arsenal"]
+        async def probe():
+            params = StdioServerParameters(command=spec["command"], args=spec["args"],
+                                           env={{**os.environ, **spec.get("env", {{}})}})
+            async with stdio_client(params) as (r, w), ClientSession(r, w) as s:
+                await s.initialize()
+                await s.call_tool("proclaim", {{"station": "classis"}})
+                await s.call_tool("parry", {{"blade": "tuba", "note": "modest claims"}})
+                await s.call_tool("pronounce_verdict", {{"headline": "Stands.", "assessment": "Nothing landed.",
+                                                        "change_my_mind": "n/a", "survived": []}})
+                return len((await s.list_tools()).tools)
+        n = asyncio.run(probe())
+        print(json.dumps({{"type": "system", "subtype": "init", "model": "fake", "session_id": "d1"}}), flush=True)
+        print(json.dumps({{"type": "assistant", "message": {{"content": [{{"type": "text", "text": f"{{n}} tools"}}]}}}}))
+        print(json.dumps({{"type": "result", "subtype": "success", "result": "Bye", "total_cost_usd": 0,
+                          "num_turns": 1, "duration_ms": 10, "usage": {{}}}}), flush=True)
+        """))
+    fake.chmod(0o755)
+    from econoclast.case.store import home
+
+    (home() / "config.yaml").write_text(f"backend: claude\nclaude_binary: {fake}\nbrowser_mcp: false\n")
+    case = Case.create(paper="https://arxiv.org/abs/2401.00001", lang="en")
+    pid = launch_detached(case)
+    deadline = time.time() + 90
+    while case.meta().get("status") not in ("done", "failed", "aborted") and time.time() < deadline:
+        time.sleep(0.25)
+    log = case.path("runner.log").read_text(errors="replace") if case.path("runner.log").exists() else ""
+    assert case.meta().get("status") == "done", log[-2000:]
+    assert case.meta().get("runner_pid") == pid
+    kinds = [e["kind"] for e in case.events()]
+    assert {"station", "parry", "verdict", "case.closed"} <= set(kinds)
+    assert any("tools" in (e.get("text") or "") for e in case.events() if e["kind"] == "narrate")
