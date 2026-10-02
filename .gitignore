@@ -36,3 +36,6 @@ reports/
 Thumbs.db
 .idea/
 .vscode/
+
+# Raw art generations (large; reproducible with tools/art/gen_art.py)
+art/

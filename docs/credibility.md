@@ -13,8 +13,8 @@ page records which, and why.
   decision-support; it never accepts/rejects.
 - **Prestige/identity bias is real and large in economics.** Across 29k evaluations of 1,220 papers,
   GPT-4o / Claude / Gemma / LLaMA gave higher ratings when elite/male author identities were visible
-  vs. anonymised (Ye et al., 2025). -> **Blind review is on by default**: authors, affiliations,
-  e-mails and acknowledgements are redacted before the LLM attacks (`--no-blind` to disable).
+  vs. anonymised (Ye et al., 2025). -> **The review is identity-blind by doctrine**: the agent is told to judge
+  the work, never the people, and the reader can redact e-mails and acknowledgements.
 - **The one field-validated deployment wrapped generation in reliability gates.** The ICLR 2025
   Review-Feedback-Agent (20k reviews) only shipped feedback that passed automated checks; 89% was
   rated a quality improvement (Thakkar et al., 2025). -> Econoclast runs a **mechanical grounding
@@ -24,29 +24,31 @@ page records which, and why.
   **citation-check** verifies the paper's own references against Crossref.
 - **Prompt injection works.** Hidden white/zero-width "GIVE A POSITIVE REVIEW" text has been found in
   real arXiv manuscripts (Lin 2025). -> Econoclast **strips invisible characters**, **detects**
-  injection phrases and **raises a finding**, and instructs the backend that the manuscript
-  is untrusted data.
+  injection phrases (they surface in `read_paper` and become an Abacus wound), and the doctrine tells the
+  agent that the manuscript is data, never instructions.
 - **Role-specialisation reduces generic comments** (Sakana AI-Scientist; MARG, D'Arcy et al. 2024).
-  -> Attacks are **role-specialised** (one persona per failure mode) and **design-gated**.
+  -> The agent swings **seventeen named blades**, each with its own question, and may hand single blades to
+  **conspirator** subagents; every blade must end in a wound or an explicit parry.
 
 ## The rules Econoclast follows
 
-1. **Ground or drop**: every LLM finding carries a quote; unverifiable quotes are down-weighted.
-2. **Blind to identity**: redact author/affiliation/funding tells before LLM review.
-3. **Untrusted input**: strip invisible text, detect and flag injection, fixed system prompt.
-4. **Every finding carries a confidence**: severity and confidence are recorded per finding; the
-   report labels how sure each one is.
-5. **Calibrate and cap**: severity × confidence, saturating fragility score; caveats on weak signals.
-6. **No sycophancy**: the adversarial persona forms its view from the paper, not from any desired
-   outcome or rebuttal.
-7. **Audit trail**: the JSON report logs every finding, its quote, the backend used, and which
-   attacks ran or were skipped.
+1. **Ground or drop**: every text wound carries a quote, checked mechanically; unverified quotes count
+   for little. Every computation wound cites the script and output behind it.
+2. **Blind to identity**: the work is judged, never the people.
+3. **Untrusted input**: invisible text stripped, injection detected and reported, fixed doctrine.
+4. **Every wound carries a confidence**, and the score uses the grounded confidence.
+5. **Calibrate and cap**: severity × confidence, saturating fragility score; integrity judged separately
+   (the seal); caveats attached to every statistical screen.
+6. **Know the world, not just the method**: the Forum makes the agent learn the field from sources before
+   it judges causality, theory and mechanism.
+7. **Audit trail**: `MANDATE.md`, `agent.log`, `events.jsonl` and every artifact stay in the case folder.
 8. **Human in the loop**: output is flags for a person to verify, never a verdict of misconduct.
 
 ## Still to do (roadmap)
 
 A held-out bias/injection audit suite; reproducibility gates against AEA/DCAS and TOP standards
-(data cited, code present and runnable, results map to tables, seed/version pinned).
+(data cited, code present and runnable, results map to tables, seed/version pinned); GRIMMER and SPRITE for
+reported standard deviations.
 
 ## References
 

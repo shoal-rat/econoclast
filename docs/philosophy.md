@@ -6,51 +6,33 @@ It does what a good referee does when they hit something unfamiliar: look it up,
 
 This is the design rule for the whole project, not just for econometrics.
 
-## One path, not two
+## The agent researches; the engine checks
 
-Econoclast runs on the intelligence of a single live model, reached through the Claude Code or Codex
-CLI. There is no separate layer of pre-coded statistical tests and no offline mode. The verdict comes
-from a grounded model critique, a research-then-verify pass for any method the critique is unsure of,
-a citation check against Crossref, and the specification-curve replication when the paper's data is
-public. The replication still uses real estimators (the McCrary density test, Callaway-Sant'Anna,
-Sun-Abraham) under the hood, but it runs only when there is data to re-run, not as a standalone digit
-check.
+Econoclast hands the research to a real agent and keeps the checking mechanical. The Sicarius (Claude Code or
+Codex) reads, searches, downloads, writes code and argues; the arsenal holds it to rules it cannot talk its
+way around: quotes are verified against the paper, computed wounds must point at files that exist, the score
+and the seal are computed, not written.
 
 ## When the method is not covered
 
-`detect_methods` reads the paper and `method_coverage` splits what it finds into covered methods and
-methods that need research. For an uncovered method (synthetic control, a bunching estimator, a
-shift-share instrument, a structural model, double machine learning, and so on), three things happen.
+For a method with no built-in check (synthetic control, bunching, shift-share, structural models, double
+machine learning), the agent does what a careful referee does with an unfamiliar method: it looks up the
+method's identifying assumptions and standard diagnostics with `search_literature` and the web, checks the
+paper against them, and, with the data in hand, writes and runs the diagnostic itself in the Fabrica. The
+doctrine's rule is the same everywhere: do not guess; lean on sources; say what could not be verified.
 
-First, Econoclast retrieves the method's literature. It searches OpenAlex, Semantic Scholar, and arXiv
-for the method's identifying assumptions and standard diagnostics and puts the results in front of the
-model. The `methodology-audit` attack then derives the assumptions and the expected tests from that
-retrieved material and checks the paper against them, rather than relying on the model's memory.
+## When the method is fine and the story is not
 
-Second, every model prompt carries an epistemic rule: do not guess about a method or a fact you are
-unsure of; lean on the retrieved sources; mark anything you could not verify as needing a check and
-give it low confidence; prefer a few grounded findings to many speculative ones. The grounding gate
-and the referee both discount unverified points.
+Many weak papers have clean regressions and a wrong story. That is why the walk passes through the Forum
+before the palace: the agent learns how the market in the paper actually works (its institutions, the people
+who decide, the magnitudes, the theory's assumptions and critiques) and only then judges whether causality
+runs the way the paper says (Inversio), whether the theory fits the setting (Theoria), and whether real
+people would behave as the mechanism requires (Mundus).
 
-Third, with `--deep`, the audit branches. It runs several independent verification strategies for the
-same question (one derives the assumptions, one lists the diagnostics, one works through the method's
-known failure modes), and a judge merges them: it keeps the best-supported points, drops duplicates,
-and prefers the approach most appropriate to the paper's actual method. This is the "try a few ways
-and keep the best" idea applied at the level of a single hard question.
+## When the data is honest and the paper is not
 
-## Building the check on the fly
-
-If the data is available and the paper uses a method with no built-in estimator, `--allow-code` lets
-the agent go one step further. It writes a single Python diagnostic for that method (a placebo or
-permutation test, a balance or continuity check, a weak-identification statistic), runs it, and turns
-the result into a finding. This executes model-written code, so it is off by default, runs only with
-the explicit flag, and should be used inside a container. A crude denylist blocks obvious file,
-network, and shell calls, but it is not a sandbox.
-
-## Why it is built this way
-
-A tool that only knows the methods its authors thought to code would be wrong about most papers within
-a year. Tying every model claim to a quote or a retrieved source, marking what could not be verified,
-and trying more than one approach when the answer is not obvious is what keeps the reviews honest as
-the set of methods keeps growing. Look-it-up-then-verify is the rule for every method, not a fallback
-for the ones nobody coded.
+Fabrication is rare; bending honest data toward a conclusion is not. A quiet sample cut, an outcome switched
+after the pre-analysis plan, a null left in the appendix, a number in the abstract that no table supports.
+The integrity blades hunt these with deterministic screens (forensics on the reported numbers and on the
+data, version diffs, code audits) that the agent must interpret, and the seal reports them apart from how
+fragile the result is.

@@ -1,14 +1,11 @@
-"""Econoclast — an adversarial AI referee for empirical-economics papers.
+"""Econoclast: an assassin from the Ravenna mosaics that tests empirical papers.
 
-Econoclast reads a target paper (PDF or LaTeX) plus local and online literature,
-then *attacks* it: grounded LLM critiques (specification search, cherry-picking,
-identification flaws, missing robustness, HARKing, over-claiming), a
-research-then-verify pass for methods it does not cover, and a specification-curve
-replication when the data is public. It synthesises an adversarial referee report
-with a "fragility score".
-
-It is a native-LLM tool: it runs on the intelligence of Claude Code or Codex (no
-API key, no offline mode).
+A traveller in Ravenna watches the gold of San Vitale come alive: a hooded Sicarius
+steps out of the wall to test the Emperor's decree (a paper's headline claim) for the
+place where it bleeds. Under the story, Econoclast runs Claude Code or Codex as a fully
+autonomous research agent: it fetches the paper and its data from the web, builds a
+local quant workshop, reproduces the headline number, attacks it along ten lines, re-runs
+it across every defensible specification, and reports how fragile it is.
 """
 
 from econoclast.version import __version__

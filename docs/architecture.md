@@ -1,69 +1,74 @@
 # Architecture
 
-Econoclast is a **bounded, reproducible pipeline**, not an open-ended agent loop. The attack set is
-fixed and design-gated, every LLM finding is grounded in a quote, and a separate referee pass does
-the final synthesis. This trades some autonomy for auditability, the right trade for a tool whose
-whole job is rigour.
-
-It is a native-LLM tool. It ships no model and no API client; it borrows the intelligence of the
-agent you already run by driving the `claude` or `codex` CLI as a subprocess under that CLI's own
-subscription auth. If neither CLI is on PATH it stops with a clear message rather than degrading to
-something weaker.
+Econoclast is three small programs that talk only through files.
 
 ```
-econoclast/
-├── ingest/        PDF (PyMuPDF/pypdf) + LaTeX parsing, section segmentation, claim harvesting,
-│                  fetching (httpx, with an agent-delegated fallback for blocked sites)
-├── literature/    keyless search (OpenAlex, S2, arXiv, Crossref) + local corpus + keyword ranking
-├── llm/           the backend: drive the claude or codex CLI as a subprocess (backend.py)
-├── attacks/       the unified Attack/Finding model: LLM critiques + methodology audit + design gating
-├── replication/   specification-curve / multiverse re-estimation when the data is public
-├── agent/         the orchestrator + referee synthesis
-├── report/        fragility score + Markdown/JSON/HTML rendering
-├── ui/            optional Streamlit app
-└── cli.py         Typer CLI
+Econoclast.app (pywebview window)                 the hunt runner                     the agent
+┌─────────────────────────────┐   spawns    ┌──────────────────────────┐ spawns ┌─────────────────────────┐
+│ web/ (stage, chronicle, UI)  │ ─────────▶ │ python -m econoclast hunt │ ─────▶ │ claude -p --output-format│
+│   ▲ window.pywebview.api     │            │   --case <dir>            │        │   stream-json  (or        │
+│ app/api.py  (the bridge)     │            │ parses the JSON stream    │        │   codex exec --json)      │
+└──────────────┬──────────────┘            └────────────┬─────────────┘        │ full autonomy, network   │
+               │ polls                                   │ appends               └──────────┬──────────────┘
+               ▼                                         ▼                                  │ MCP (stdio)
+        ~/.econoclast/cases/<id>/events.jsonl  ◀──────── appends ── econoclast arsenal ◀───┤
+        case.json  MANDATE.md  mcp.json                                                     ├─▶ Playwright MCP
+        paper/ data/ code/ out/ notes/ offerings/                                           └─▶ your MCP servers
+        verdict.json  tabula.html|md|json
 ```
 
-## The pipeline
+## The case folder
 
-1. **Ingest.** Load PDF/LaTeX/text -> `Paper` (title, abstract, sections, tables). A conservative regex
-   pass harvests every `StatClaim` it can: `(coef, se)`, t/F/r/z/χ² statistics with df, p-values,
-   means/SDs, stars, and N.
-2. **Detect design.** Keyword detection tags the paper with `did / rdd / iv / matching / rct / panel_fe
-   / structural`. This *gates* design-specific attacks and tailors prompts.
-3. **Literature.** Build a query from the title + abstract, search the keyless sources (and any local
-   corpus), rank by keyword overlap + citation count. Used to ground the referee and the
-   literature-contradiction attack.
-4. **Attack.** The grounded LLM critiques (specification-search, cherry-picking, identification,
-   robustness-coverage, HARKing, over-claiming, literature-contradiction), a research-then-verify
-   methodology audit for methods the tool does not cover, and a citation-check against Crossref run
-   **concurrently** in a thread pool. The backend is thread-safe. Each attack is gated, and one
-   attack failing never kills the run.
-5. **Synthesise.** A `fragility` score aggregates findings by `severity × confidence` (saturating,
-   with an integrity override). The referee pass writes a meta-review: a one-line verdict, a
-   specific assessment, and the single most decisive test that would change its mind.
-6. **Report.** Render to Markdown, JSON, and a self-contained HTML page.
+Every hunt owns `~/.econoclast/cases/<id>/`. The agent's working directory is that folder, and everything it
+produces stays there: the paper (`paper/`), downloads and replication packages (`data/`), its own scripts
+(`code/`), outputs and forensic artifacts (`out/`), the field brief (`notes/`), files you hand over
+(`offerings/`), and the reports. `MANDATE.md` holds the exact orders the agent received; `agent.log` holds its
+raw stream.
 
-## Design choices worth knowing
+## The event log
 
-- **One backend, one model.** The only model setting is the backend: `backend: auto | claude | codex`
-  (or `--backend`), with an optional `model:` override and `backend_args` passed through to the CLI.
-  `econoclast backend` shows which agent it will drive. Attacks request a `role`
-  (`extractor` / `attacker` / `referee`) only so the backend can pick a temperature; there is a single
-  model behind every role. New code lives in `llm/backend.py` (the `Backend` class + `detect_backend`),
-  replacing the deleted `llm/router.py`.
-- **Grounding.** Every LLM finding must include a verbatim quote; ungrounded findings are capped at
-  low confidence. This is the main defence against hallucinated problems.
-- **Integrity override.** The fragility score forces a high band on a high-confidence
-  reporting-inconsistency finding, so an internally contradictory reported number cannot hide behind
-  an otherwise calm verdict.
-- **Graceful degradation.** A literature source down -> it returns `[]` and the run continues. There is
-  no offline mode: if neither `claude` nor `codex` is on PATH, the run stops with a clear message.
-- **Econoclast directs, the agent works.** Paper and dataset fetches try plain httpx first; if a site
-  blocks it (403 / Cloudflare / JS gate), Econoclast hands the agent a work order and the agent does the
-  download with its own tools. `Backend.fetch_into` runs `claude -p` (with a tool allowlist) or
-  `codex exec` (workspace-write with network) so the agent can drive a browser, curl with cookies, or
-  search the web, then saves the file into the cache. Off via `agent_download: false`. This is the
-  general pattern: Econoclast decides what needs doing and delegates the doing to the agent it runs on.
-- **No CLI in tests.** Tests inject a fake backend (`tests/_fake.py`), so the suite never spawns
-  `claude` or `codex` and stays deterministic.
+`events.jsonl` is append-only; each line is one event with a `kind` and a timestamp. Three writers append
+under an exclusive file lock:
+
+- the **runner** translates the agent's stream (`sicarius/streams.py`): `session`, `narrate`, `tool`,
+  `tool.done`, `spawn`, `usage`, `final`, `case.opened`, `case.closed`;
+- the **arsenal** MCP server, called by the agent, records structure: `station`, `intel`, `acquired`, `forge`,
+  `speculum`, `viae`, `wound`, `parry`, `plea`, `verdict`;
+- the **app** records your answers: `plea.answered`.
+
+The app never talks to the agent. It polls the log and feeds new events to the director (`web/js/director.js`),
+which turns each into choreography on the wall. Because the log is the only source of truth, the window can
+close and reopen mid-hunt, and a finished hunt can be replayed exactly.
+
+## Processes
+
+`econoclast` opens the window (`app/__init__.py`). Starting a hunt calls `Api.begin`, which creates the case and
+launches `python -m econoclast hunt --case <dir>` in its own session (`sicarius.launch_detached`), so the hunt
+outlives the window. The runner builds the agent's command (`Hunt.command`): the doctrine as appended system
+prompt (Claude) or prompt preamble (Codex), the case brief on stdin, the MCP servers (`mcp.json` for Claude,
+`-c mcp_servers.*` overrides for Codex), full permissions, and for Claude a `conspirator` subagent. Calling off
+a hunt sends SIGTERM to the runner, which terminates the agent's process group and closes the case as
+`aborted`. If the app finds a case still marked running whose processes are gone, it marks it `interrupted`.
+
+## The engine's packages
+
+| Package | Role |
+|---|---|
+| `world.py` | the lexicon: stations, blades, verdict bands, seals |
+| `case/` | the case folder, the event log, wounds and parries, the score and the seal, the Tabula |
+| `arsenal/` | the MCP server and the doctrine (standing orders and per-station orders) |
+| `sicarius/` | the runner: agent commands and stream parsers |
+| `tesserae/` | reading papers: PDF/LaTeX/HTML, statistics extraction, sanitising, the Abacus, paper forensics, version diffs |
+| `bibliotheca/` | literature search, dataset links and downloads, public data (FRED, World Bank), the code audit |
+| `fabrica/` | the shared local quant workshop (a lean uv/venv Python with the econometrics stack; extras on demand) |
+| `viae/` | the specification curve, McCrary, Callaway-Sant'Anna, Sun-Abraham, Goodman-Bacon, data forensics |
+| `app/` | the window, the bridge API, the developer preview server, the macOS installer, and `web/` |
+
+## The stage
+
+`web/js/stage.js` composites a 1600x900 canvas every frame from real mosaic art: scenes as backgrounds,
+figures as cut-outs anchored at their feet. The living-mosaic effects are all in that file: figures step on a
+tessera grid, change pose by reshuffling 10-pixel tiles between the two frames, burst into tesserae when hit,
+crack when wounded (`paintScar`), assemble out of flying tiles, and catch glints on their gold. Scene changes
+turn the wall over tile by tile. `director.js` holds the layout of every wall and the choreography for every
+event; `ui.js`, `tabula.js` and `prologue.js` hold the chrome, the report and the opening.

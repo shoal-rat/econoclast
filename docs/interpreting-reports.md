@@ -1,55 +1,47 @@
-# Interpreting an Econoclast report
+# Reading a Tabula
 
-**Read this before you quote a finding.** Econoclast is a *screening* tool. It surfaces hypotheses for
-a human to verify, not verdicts of misconduct.
+**Read this before you quote a wound in public.** Econoclast is a screening tool. It surfaces hypotheses
+for a person to verify, not verdicts of misconduct.
 
-## The fragility score
+## Two separate judgements
 
-A 0–100 number with a band:
+**Fragility** (0-100, the Emperor's fate) answers: *how much of the headline survives?* Each wound weighs
+severity times grounded confidence; the deepest counts in full and each further wound counts 30% less, and the
+total saturates. The score follows how deep the worst wounds go, not how many blades were swung: one high wound
+grazes, a few wound, and only several critical wounds fell the Emperor.
 
-| Band | Score | Meaning |
+| Score | Verdict | Read it as |
 |---|---|---|
-| Robust | < 15 | nothing material surfaced |
-| Minor concerns | 15–35 | small issues; headline probably safe |
-| Material concerns | 35–60 | real weaknesses; may not survive scrutiny |
-| Fragile | 60–80 | central claim looks fragile to plausible alternatives |
-| Severe | 80+ | treat the central claim as unsupported until addressed |
+| below 15 | Imperator stat · the Emperor stands | nothing material landed |
+| 15-35 | Laesus · grazed | small cuts; the headline is probably safe |
+| 35-60 | Vulneratus · wounded | real weaknesses; it may not survive a hostile referee |
+| 60-80 | Moribundus · mortally wounded | fragile to plausible alternative choices |
+| 80+ | Cecidit · fallen | treat the claim as unsupported until the wounds are answered |
 
-The score is the saturating sum of `severity × confidence` over all findings. It **saturates** so a
-few decisive findings dominate a pile of weak ones. An **integrity override** lifts the band whenever
-a high-confidence reporting-inconsistency finding shows a reported number is internally impossible or
-inconsistent.
+**The seal** (integrity) answers: *can the numbers and the presentation be taken at face value?* It reads only
+the integrity blades (Abacus, Falsum, Speculum, Palimpsestus, Fucus).
 
-## What each signal does and does NOT mean
+| Seal | Means |
+|---|---|
+| Sigillum integrum · intact | no integrity flag survived the agent's judgement |
+| Sigillum dubium · questioned | some flags deserve a human look; each may be innocent |
+| Sigillum fractum · broken | serious flags: numbers that cannot be true, data or versions bent toward the conclusion |
 
-Every finding is a grounded LLM judgment carrying a verbatim quote, so you can check it against the
-paper in seconds. If the quote doesn't support the claim, discard it.
+A paper can be fragile with an intact seal (honest but over-sold), or robust with a questioned seal (the
+result holds, but something in the presentation needs explaining). A deep integrity wound also floors the
+fragility score at 45, because a result you cannot trust cannot be "grazed".
 
-- **reporting-inconsistency** -> a reported number looks internally impossible or mismatched (a mean
-  outside its scale, a t-statistic that doesn't match its coefficient and standard error). The cause
-  could be a typo, a rounding convention, or a transcription error, **not necessarily fabrication.** It
-  always warrants a correction. A high-confidence one triggers the integrity override.
-- **specification-search, cherry-picking, identification, robustness-coverage, HARKing, over-claiming,
-  literature-contradiction** -> reasoning about the choices behind the result. This *can be wrong or
-  over-confident.* Read the quote and decide for yourself.
-- **methodology audit** -> for a method Econoclast does not cover, it researches the method's literature
-  first, then checks the paper against what that literature expects.
-- **citation-check** -> references resolved against Crossref. A low resolve rate is a flag to look
-  harder at the bibliography, not proof of a problem.
+## What a wound does and does not mean
 
-## Confidence
-
-Each finding's confidence reflects how sure the attack is that the problem is *real and material*. A
-finding whose quote does not actually appear in the paper is treated as ungrounded and auto-capped at
-0.35. A referee pass writes the synthesis over the surviving findings.
-
-## Good uses
-
-- Stress-test **your own** paper before submission.
-- Referee more thoroughly: generate a structured first pass, then verify each flag.
-- Teach what robustness actually requires.
-
-## Bad uses
-
-- Don't paste a fragility score into a public accusation. Verify findings, talk to authors, and
-  remember the base rate: many flagged inconsistencies are honest errors.
+- **Text wounds** carry a verbatim quote, checked mechanically against the paper. If the quote was not found,
+  the wound says so and counts for little. Read the quote: if it does not support the wound, discard it.
+- **Computation wounds** point at the script and output that produced them, in the case folder. Rerun them.
+- **Forum wounds** (Inversio, Theoria, Mundus) rest on the field brief: open `notes/field.md` and check the
+  sources the agent relied on. They are arguments about the real world, and the right response to them is
+  evidence about the real world.
+- **Falsum** flags are statistical screens. GRIM fails on non-integer items; digit tests fail on rounded or
+  coded data; bunching is a property of literatures. The agent is told to rule out innocent explanations and
+  say which ones it could not rule out.
+- **Palimpsestus** compares versions. Papers change for good reasons; the question is whether a change that
+  favours the headline was disclosed.
+- **An impossible number is often an honest typo.** Ask the authors before you assume anything else.

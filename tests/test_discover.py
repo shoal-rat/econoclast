@@ -6,8 +6,8 @@ import io
 import zipfile
 from pathlib import Path
 
-from econoclast.ingest.models import Paper
-from econoclast.replication.discover import find_dataset_links
+from econoclast.bibliotheca.datalinks import find_dataset_links
+from econoclast.tesserae.models import Paper
 
 
 def _paper(text: str) -> Paper:
@@ -55,10 +55,10 @@ def test_zip_extraction_and_table_pick(tmp_path):
     import pytest
 
     pytest.importorskip("pandas")
-    from econoclast.replication.acquire import (
+    from econoclast.bibliotheca.acquire import (
         _save_and_maybe_unzip,
-        find_tabular_files,
         pick_main_table,
+        tabular_files,
     )
 
     buf = io.BytesIO()
@@ -66,7 +66,28 @@ def test_zip_extraction_and_table_pick(tmp_path):
         zf.writestr("readme.txt", "hello")
         zf.writestr("analysis_panel.csv", "wage,educ,age\n10,12,30\n11,13,31\n")
     out = _save_and_maybe_unzip(buf.getvalue(), tmp_path, "pkg.zip")
-    tables = find_tabular_files([Path(p) for p in out])
+    tables = tabular_files([Path(p) for p in out])
     assert any(t.name == "analysis_panel.csv" for t in tables)
     paper = _paper("We regress wage on educ and age.")
     assert pick_main_table(tables, paper).name == "analysis_panel.csv"
+
+
+def test_zip_slip_is_refused(tmp_path):
+    from econoclast.bibliotheca.acquire import _save_and_maybe_unzip
+
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as zf:
+        zf.writestr("../../evil.csv", "a\n1\n")
+        zf.writestr("ok/data.csv", "a\n1\n")
+    out = _save_and_maybe_unzip(buf.getvalue(), tmp_path, "pkg.zip")
+    assert [p.name for p in out] == ["data.csv"]
+    assert not (tmp_path.parent / "evil.csv").exists()
+
+
+def test_classify_url():
+    from econoclast.bibliotheca.datalinks import classify_url
+
+    assert classify_url("https://zenodo.org/records/123456")[0] == "zenodo"
+    assert classify_url("https://doi.org/10.7910/DVN/ABCDEF")[0] == "dataverse"
+    assert classify_url("https://github.com/owner/repo")[0] == "github"
+    assert classify_url("https://example.org/data.csv")[0] == "direct"
